@@ -1,0 +1,55 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+spring:
+  application:
+    name: seniorconnect-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/seniorconnect}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      timeout: 2000ms
+
+seniorconnect:
+  security:
+    jwt:
+      access-token-expiration-seconds: 900 # 15 minutes
+      refresh-token-expiration-seconds: 2592000 # 30 days
+      issuer: seniorconnect-auth-server
+    otp:
+      expiration-seconds: 300 # 5 minutes
+      max-attempts: 5
+      lockout-seconds: 900 # 15 minutes
+  ratelimit:
+    auth-requests-per-hour: 5
+    queries-per-day: 5
+    responses-per-day: 20
+    reveals-per-day: 10
+
+logging:
+  level:
+    root: INFO
+    com.seniorconnect: DEBUG

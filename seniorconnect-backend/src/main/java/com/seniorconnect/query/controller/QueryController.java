@@ -1,0 +1,79 @@
+package com.seniorconnect.query.controller;
+
+import com.seniorconnect.auth.security.UserPrincipal;
+import com.seniorconnect.query.dto.CreateQueryRequest;
+import com.seniorconnect.query.dto.QueryResponseDto;
+import com.seniorconnect.query.entity.QueryStatus;
+import com.seniorconnect.query.service.QueryService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/queries")
+public class QueryController {
+
+    private final QueryService queryService;
+
+    public QueryController(QueryService queryService) {
+        this.queryService = queryService;
+    }
+
+    @PostMapping
+    public ResponseEntity<QueryResponseDto> createQuery(
+            @Valid @RequestBody CreateQueryRequest request,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest
+    ) {
+        String clientIp = extractClientIp(httpRequest);
+        QueryResponseDto response = queryService.createQuery(request, principal, clientIp);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<QueryResponseDto> getQueryById(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(queryService.getQueryById(id, principal));
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<QueryResponseDto>> getQueriesFeed(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String tag,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 50));
+        if (tag != null && !tag.isBlank()) {
+            return ResponseEntity.ok(queryService.searchByTag(tag, pageable, principal));
+        }
+        return ResponseEntity.ok(queryService.getQueriesFeed(pageable, principal));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<QueryResponseDto> updateStatus(
+            @PathVariable UUID id,
+            @RequestParam QueryStatus status,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(queryService.updateStatus(id, status, principal));
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String xForwarded = request.getHeader("X-Forwarded-For");
+        if (xForwarded != null && !xForwarded.isBlank()) {
+            return xForwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+}

@@ -1,0 +1,32 @@
+# Environment & Secrets
+.env
+*.env
+*.pem
+*.key
+*.p12
+
+# Maven / Java
+target/
+*.class
+*.jar
+*.war
+.idea/
+*.iml
+.settings/
+.classpath
+.project
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.lock
+android/.gradle
+ios/Pods
+ios/.symlinks
+
+# OS files
+.DS_Store
+Thumbs.db
