@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/models/user_model.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../queries/screens/query_feed_screen.dart';
