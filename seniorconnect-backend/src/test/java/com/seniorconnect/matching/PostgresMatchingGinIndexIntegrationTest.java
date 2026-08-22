@@ -27,10 +27,27 @@ public class PostgresMatchingGinIndexIntegrationTest {
 
     @BeforeAll
     static void setUpPostgres() throws Exception {
-        System.out.println("Starting real PostgreSQL test engine...");
-        embeddedPostgres = EmbeddedPostgres.builder()
-                .start();
-        dataSource = embeddedPostgres.getPostgresDatabase();
+        String envUrl = System.getenv("SPRING_DATASOURCE_URL");
+        if (envUrl != null && !envUrl.isBlank() && !envUrl.contains(":h2:")) {
+            try {
+                org.postgresql.ds.PGSimpleDataSource pgDs = new org.postgresql.ds.PGSimpleDataSource();
+                pgDs.setUrl(envUrl);
+                pgDs.setUser(System.getenv("SPRING_DATASOURCE_USERNAME") != null ? System.getenv("SPRING_DATASOURCE_USERNAME") : "postgres");
+                pgDs.setPassword(System.getenv("SPRING_DATASOURCE_PASSWORD") != null ? System.getenv("SPRING_DATASOURCE_PASSWORD") : "postgrespassword");
+                try (Connection c = pgDs.getConnection()) {
+                    dataSource = pgDs;
+                    System.out.println("Connected to external PostgreSQL database at " + envUrl);
+                }
+            } catch (Exception e) {
+                System.out.println("Could not connect to external PostgreSQL: " + e.getMessage() + ", falling back to embedded.");
+            }
+        }
+
+        if (dataSource == null) {
+            System.out.println("Starting embedded PostgreSQL test engine...");
+            embeddedPostgres = EmbeddedPostgres.builder().start();
+            dataSource = embeddedPostgres.getPostgresDatabase();
+        }
 
         // Run real Flyway migrations V1 through V4 against real PostgreSQL
         Flyway flyway = Flyway.configure()
