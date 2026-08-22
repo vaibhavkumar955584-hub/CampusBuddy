@@ -51,18 +51,18 @@ public class MatchingService {
         UUID juniorId = query.getJunior() != null ? query.getJunior().getId() : null;
 
         List<SeniorProfile> candidateProfiles;
-        try {
-            if (!queryTagsList.isEmpty()) {
-                String csv = String.join(",", queryTagsList);
+        if (!queryTagsList.isEmpty()) {
+            String csv = String.join(",", queryTagsList);
+            try {
                 candidateProfiles = seniorProfileRepository.findMatchingProfilesNative(csv);
-                if (candidateProfiles.isEmpty()) {
+                if (candidateProfiles.isEmpty() && branch != null) {
                     candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
                 }
-            } else {
-                candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
+            } catch (Exception e) {
+                log.error("Native array-overlap matching query failed [queryTags='{}']: {}", csv, e.getMessage(), e);
+                throw e;
             }
-        } catch (Exception e) {
-            log.debug("Using candidate profiles by branch fallback: {}", e.getMessage());
+        } else {
             candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
         }
 

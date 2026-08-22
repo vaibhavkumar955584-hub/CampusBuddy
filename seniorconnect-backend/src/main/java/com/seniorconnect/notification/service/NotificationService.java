@@ -87,9 +87,9 @@ public class NotificationService {
                 return false;
             }
         } else {
-            log.info("FCM PUSH SENT (FALLBACK LOG ONLY) [token={}, title='{}', body='{}', data={}]",
-                    deviceToken, title, body, payload);
-            return true;
+            log.warn("FCM push notification NOT sent: FirebaseMessaging is not initialized/configured. [token={}, title='{}', type={}]",
+                    deviceToken, title, notificationType);
+            return false;
         }
     }
 }

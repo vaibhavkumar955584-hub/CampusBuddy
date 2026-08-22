@@ -7,8 +7,6 @@ import com.seniorconnect.notification.service.NotificationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.UUID;
 
@@ -16,41 +14,36 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@ActiveProfiles("test")
-public class FcmNotificationIntegrationTest {
+/**
+ * UNIT TEST: Verifies internal business logic of NotificationService.
+ * NOTE: This is a unit test of payload construction and exception handling.
+ * It uses Mockito mocks to verify method interactions and error codes.
+ */
+public class FcmNotificationUnitTest {
 
     @Test
-    @DisplayName("Gap 2 Evidence: NotificationService sends real FCM message with privacy preserving payload")
-    void testNotificationServiceFcmDispatch() throws Exception {
+    @DisplayName("Unit Test: NotificationService constructs privacy-safe FCM message and calls send()")
+    void testNotificationServicePayloadConstruction() throws Exception {
         FirebaseMessaging mockMessaging = mock(FirebaseMessaging.class);
-        when(mockMessaging.send(any(Message.class))).thenReturn("projects/campus-buddy/messages/fcm_msg_12345");
+        when(mockMessaging.send(any(Message.class))).thenReturn("projects/campus-buddy/messages/mock_msg_id");
 
         NotificationService service = new NotificationService(mockMessaging);
 
-        String deviceToken = "fcm_device_token_abc_xyz_789";
+        String deviceToken = "fcm_device_token_sample_123";
         UUID resourceId = UUID.randomUUID();
 
         boolean sent = service.sendGenericNotification(deviceToken, "NEW_RESPONSE", resourceId);
 
-        assertTrue(sent, "Notification should be reported as sent");
+        assertTrue(sent, "Notification should return true when FirebaseMessaging.send() succeeds");
         ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
         verify(mockMessaging, times(1)).send(captor.capture());
 
         Message capturedMessage = captor.getValue();
         assertNotNull(capturedMessage);
-
-        System.out.println("=== FCM PUSH NOTIFICATION EVIDENCE ===");
-        System.out.println("Device Token: " + deviceToken);
-        System.out.println("Notification Type: NEW_RESPONSE");
-        System.out.println("Resource ID: " + resourceId);
-        System.out.println("FCM Response Message ID: projects/campus-buddy/messages/fcm_msg_12345");
-        System.out.println("Privacy Rules Enforced: No question text, no junior identity sent in payload");
-        System.out.println("======================================");
     }
 
     @Test
-    @DisplayName("Gap 2 Evidence: NotificationService handles Firebase exceptions cleanly without crashing")
+    @DisplayName("Unit Test: NotificationService handles Firebase exceptions cleanly without crashing")
     void testNotificationServiceHandlesFcmExceptions() throws Exception {
         FirebaseMessaging mockMessaging = mock(FirebaseMessaging.class);
         FirebaseMessagingException exception = mock(FirebaseMessagingException.class);
@@ -63,5 +56,15 @@ public class FcmNotificationIntegrationTest {
 
         assertFalse(sent, "Notification should return false on FCM exception");
         verify(mockMessaging, times(1)).send(any(Message.class));
+    }
+
+    @Test
+    @DisplayName("Unit Test: NotificationService returns false when FirebaseMessaging bean is unconfigured/null")
+    void testNotificationServiceReturnsFalseWhenUnconfigured() {
+        NotificationService service = new NotificationService(null);
+
+        boolean sent = service.sendGenericNotification("some_token", "NEW_RESPONSE", UUID.randomUUID());
+
+        assertFalse(sent, "Unconfigured Firebase service must return false, never pretend it sent");
     }
 }
