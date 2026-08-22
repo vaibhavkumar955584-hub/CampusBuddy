@@ -10,6 +10,7 @@ class ApiConstants {
 
   // Queries
   static const String queries = '$baseUrl/queries';
+  static const String matchedQueries = '$queries/matched';
   static String responses(String queryId) => '$queries/$queryId/responses';
 
   // Reveals
@@ -17,9 +18,11 @@ class ApiConstants {
   static const String pendingReveals = '$reveals/pending';
   static String respondReveal(String revealId) => '$reveals/$revealId/respond';
 
-  // Moderation
+  // Moderation & Reports
   static const String moderation = '$baseUrl/moderation';
+  static const String reports = '$moderation/reports';
 
   // Profiles
   static const String profiles = '$baseUrl/profiles';
+  static String profile(String userId) => '$profiles/$userId';
 }

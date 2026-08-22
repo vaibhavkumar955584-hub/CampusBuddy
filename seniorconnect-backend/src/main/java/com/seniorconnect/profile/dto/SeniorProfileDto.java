@@ -2,6 +2,8 @@ package com.seniorconnect.profile.dto;
 
 import com.seniorconnect.profile.entity.SeniorProfile;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 public record SeniorProfileDto(
@@ -11,6 +13,8 @@ public record SeniorProfileDto(
         String branch,
         int points,
         String placementTag,
+        List<String> tags,
+        List<String> badges,
         boolean isTagVerified
 ) {
     public static SeniorProfileDto fromEntity(SeniorProfile profile) {
@@ -21,6 +25,8 @@ public record SeniorProfileDto(
                 profile.getUser().getBranch(),
                 profile.getPoints(),
                 profile.getPlacementTag(),
+                profile.getTags() != null ? profile.getTags() : Collections.emptyList(),
+                profile.getBadges() != null ? profile.getBadges() : Collections.emptyList(),
                 profile.isTagVerified()
         );
     }

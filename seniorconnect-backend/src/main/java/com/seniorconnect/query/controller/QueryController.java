@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,6 +59,17 @@ public class QueryController {
             return ResponseEntity.ok(queryService.searchByTag(tag, pageable, principal));
         }
         return ResponseEntity.ok(queryService.getQueriesFeed(pageable, principal));
+    }
+
+    @GetMapping("/matched")
+    @PreAuthorize("hasAnyRole('SENIOR', 'ADMIN')")
+    public ResponseEntity<Page<QueryResponseDto>> getMatchedQueries(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 50));
+        return ResponseEntity.ok(queryService.getMatchedQueriesForSenior(pageable, principal));
     }
 
     @PatchMapping("/{id}/status")

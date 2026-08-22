@@ -45,7 +45,7 @@ CREATE TABLE queries (
     junior_id UUID NOT NULL REFERENCES users(id),
     title VARCHAR(300) NOT NULL,
     content VARCHAR(5000) NOT NULL,
-    tags VARCHAR(500),
+    tags TEXT ARRAY,
     is_anonymous_display BOOLEAN NOT NULL DEFAULT TRUE,
     status VARCHAR(32) NOT NULL DEFAULT 'OPEN',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -116,6 +116,8 @@ CREATE TABLE senior_profiles (
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     points INT NOT NULL DEFAULT 0,
     placement_tag VARCHAR(255),
+    tags TEXT ARRAY,
+    badges TEXT ARRAY,
     is_tag_verified BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

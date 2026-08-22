@@ -6,6 +6,8 @@ import com.seniorconnect.auth.security.UserPrincipal;
 import com.seniorconnect.common.exception.AppException;
 import com.seniorconnect.common.util.SanitizerUtil;
 import com.seniorconnect.profile.dto.SeniorProfileDto;
+import com.seniorconnect.profile.entity.SeniorProfile;
+import com.seniorconnect.profile.repository.SeniorProfileRepository;
 import com.seniorconnect.profile.service.SeniorProfileService;
 import com.seniorconnect.query.dto.AnswerResponseDto;
 import com.seniorconnect.query.dto.CreateQueryRequest;
@@ -21,14 +23,14 @@ import com.seniorconnect.user.entity.User;
 import com.seniorconnect.user.model.Role;
 import com.seniorconnect.user.repository.UserRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class QueryService {
@@ -36,6 +38,7 @@ public class QueryService {
     private final QueryRepository queryRepository;
     private final ResponseRepository responseRepository;
     private final UserRepository userRepository;
+    private final SeniorProfileRepository seniorProfileRepository;
     private final RateLimiterService rateLimiterService;
     private final AuditService auditService;
     private final RevealService revealService;
@@ -45,6 +48,7 @@ public class QueryService {
             QueryRepository queryRepository,
             ResponseRepository responseRepository,
             UserRepository userRepository,
+            SeniorProfileRepository seniorProfileRepository,
             RateLimiterService rateLimiterService,
             AuditService auditService,
             RevealService revealService,
@@ -53,6 +57,7 @@ public class QueryService {
         this.queryRepository = queryRepository;
         this.responseRepository = responseRepository;
         this.userRepository = userRepository;
+        this.seniorProfileRepository = seniorProfileRepository;
         this.rateLimiterService = rateLimiterService;
         this.auditService = auditService;
         this.revealService = revealService;
@@ -125,6 +130,55 @@ public class QueryService {
             boolean isRevealed = !isAuthorOrAdmin && revealService.isIdentityRevealed(query.getId(), principal.getId());
             return QueryResponseDto.fromEntity(query, isRevealed, isAuthorOrAdmin, null);
         });
+    }
+
+    @Transactional(readOnly = true)
+    public Page<QueryResponseDto> getMatchedQueriesForSenior(Pageable pageable, UserPrincipal principal) {
+        SeniorProfile profile = seniorProfileRepository.findByUserId(principal.getId()).orElse(null);
+        User senior = userRepository.findById(principal.getId()).orElse(null);
+
+        Set<String> seniorTags = new HashSet<>();
+        if (profile != null) {
+            seniorTags.addAll(profile.getTags().stream().map(String::toLowerCase).toList());
+            if (profile.getPlacementTag() != null) {
+                seniorTags.add(profile.getPlacementTag().toLowerCase());
+            }
+        }
+        String seniorBranch = senior != null ? senior.getBranch() : null;
+
+        Page<Query> openQueries = queryRepository.findByStatusOrderByCreatedAtDesc(QueryStatus.OPEN, pageable);
+
+        List<Query> filtered = openQueries.getContent().stream()
+                .filter(q -> !q.getJunior().getId().equals(principal.getId()))
+                .sorted((q1, q2) -> {
+                    int score1 = calculateQueryMatchScore(q1, seniorTags, seniorBranch);
+                    int score2 = calculateQueryMatchScore(q2, seniorTags, seniorBranch);
+                    return Integer.compare(score2, score1);
+                })
+                .collect(Collectors.toList());
+
+        Page<Query> matchedPage = new PageImpl<>(filtered, pageable, openQueries.getTotalElements());
+        return matchedPage.map(query -> {
+            boolean isAuthorOrAdmin = principal.getId().equals(query.getJunior().getId()) || principal.getRole() == Role.ADMIN;
+            boolean isRevealed = !isAuthorOrAdmin && revealService.isIdentityRevealed(query.getId(), principal.getId());
+            return QueryResponseDto.fromEntity(query, isRevealed, isAuthorOrAdmin, null);
+        });
+    }
+
+    private int calculateQueryMatchScore(Query query, Set<String> seniorTags, String seniorBranch) {
+        int score = 0;
+        if (seniorBranch != null && query.getJunior().getBranch() != null && seniorBranch.equalsIgnoreCase(query.getJunior().getBranch())) {
+            score += 10;
+        }
+        for (String qTag : query.getTagsList()) {
+            String qTagLower = qTag.toLowerCase();
+            for (String sTag : seniorTags) {
+                if (sTag.contains(qTagLower) || qTagLower.contains(sTag)) {
+                    score += 20;
+                }
+            }
+        }
+        return score;
     }
 
     @Transactional(readOnly = true)

@@ -6,6 +6,8 @@ import com.seniorconnect.query.entity.Query;
 import com.seniorconnect.user.entity.User;
 import com.seniorconnect.user.model.Role;
 import com.seniorconnect.user.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +16,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class MatchingService {
+
+    private static final Logger log = LoggerFactory.getLogger(MatchingService.class);
 
     private final UserRepository userRepository;
     private final SeniorProfileRepository seniorProfileRepository;
@@ -25,56 +29,92 @@ public class MatchingService {
 
     /**
      * Matches seniors whose profile tags or branch match the query tags.
-     * Ranked by total gamification points and branch relevance.
+     * Uses DB-level native Postgres array overlap (sp.tags && :queryTags) and fast candidate joins
+     * to eliminate O(N) full-table scans.
+     * Ranked by total gamification points, verified status, and branch relevance.
      */
     @Transactional(readOnly = true)
     public List<User> matchSeniorsForQuery(Query query) {
+        return matchSeniorsForQuery(query, 20);
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> matchSeniorsForQuery(Query query, int limit) {
         if (query == null) return Collections.emptyList();
 
-        Set<String> queryTagSet = new HashSet<>();
-        if (query.getTags() != null && !query.getTags().isBlank()) {
-            for (String t : query.getTags().split(",")) {
-                queryTagSet.add(t.trim().toLowerCase());
+        List<String> queryTagsList = query.getTagsList();
+        Set<String> queryTagSet = queryTagsList.stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+
+        String branch = query.getJunior() != null ? query.getJunior().getBranch() : null;
+        UUID juniorId = query.getJunior() != null ? query.getJunior().getId() : null;
+
+        List<SeniorProfile> candidateProfiles;
+        try {
+            if (!queryTagsList.isEmpty()) {
+                String csv = String.join(",", queryTagsList);
+                candidateProfiles = seniorProfileRepository.findMatchingProfilesNative(csv);
+                if (candidateProfiles.isEmpty()) {
+                    candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
+                }
+            } else {
+                candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
             }
+        } catch (Exception e) {
+            log.debug("Using candidate profiles by branch fallback: {}", e.getMessage());
+            candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
         }
 
-        List<User> seniors = userRepository.findAll().stream()
-                .filter(u -> u.getRole() == Role.SENIOR && !u.isSuspended())
-                .filter(u -> !u.getId().equals(query.getJunior().getId()))
-                .toList();
-
-        // Rank seniors by match score (tag intersection + points bonus)
-        return seniors.stream()
-                .sorted((s1, s2) -> {
-                    int score1 = calculateSeniorMatchScore(s1, query, queryTagSet);
-                    int score2 = calculateSeniorMatchScore(s2, query, queryTagSet);
+        // Apply scoring bonuses to the database-narrowed candidate list
+        return candidateProfiles.stream()
+                .filter(p -> p.getUser() != null && p.getUser().getRole() == Role.SENIOR && !p.getUser().isSuspended())
+                .filter(p -> juniorId == null || !p.getUser().getId().equals(juniorId))
+                .sorted((p1, p2) -> {
+                    int score1 = calculateSeniorMatchScore(p1, query, queryTagSet);
+                    int score2 = calculateSeniorMatchScore(p2, query, queryTagSet);
                     return Integer.compare(score2, score1); // Descending
                 })
+                .limit(limit > 0 ? limit : 20)
+                .map(SeniorProfile::getUser)
                 .collect(Collectors.toList());
     }
 
-    private int calculateSeniorMatchScore(User senior, Query query, Set<String> queryTags) {
+    private int calculateSeniorMatchScore(SeniorProfile profile, Query query, Set<String> queryTags) {
         int score = 0;
+        User senior = profile.getUser();
 
         // Branch matching bonus (+10)
-        if (senior.getBranch() != null && query.getJunior().getBranch() != null) {
+        if (senior.getBranch() != null && query.getJunior() != null && query.getJunior().getBranch() != null) {
             if (senior.getBranch().equalsIgnoreCase(query.getJunior().getBranch())) {
                 score += 10;
             }
         }
 
-        // Tag matching bonus (+20 per matched tag in placement / bio tag)
-        SeniorProfile profile = seniorProfileRepository.findByUser(senior).orElse(null);
-        if (profile != null) {
-            score += profile.getPoints(); // Mentorship experience weight
-            if (profile.getPlacementTag() != null) {
-                String placementLower = profile.getPlacementTag().toLowerCase();
-                for (String tag : queryTags) {
-                    if (placementLower.contains(tag)) {
-                        score += 20;
-                        if (profile.isTagVerified()) {
-                            score += 15; // Bonus for verified placement credentials
-                        }
+        // Gamification points weight
+        score += profile.getPoints();
+
+        // Tag matching bonus (+20 per matched tag in placement / bio tags)
+        for (String pTag : profile.getTags()) {
+            String pTagLower = pTag.toLowerCase();
+            for (String qTag : queryTags) {
+                if (pTagLower.contains(qTag) || qTag.contains(pTagLower)) {
+                    score += 20;
+                    if (profile.isTagVerified()) {
+                        score += 15; // Bonus for verified placement credentials
+                    }
+                }
+            }
+        }
+
+        // Backwards compatibility for placementTag string field
+        if (profile.getPlacementTag() != null && profile.getTags().isEmpty()) {
+            String placementLower = profile.getPlacementTag().toLowerCase();
+            for (String qTag : queryTags) {
+                if (placementLower.contains(qTag)) {
+                    score += 20;
+                    if (profile.isTagVerified()) {
+                        score += 15;
                     }
                 }
             }

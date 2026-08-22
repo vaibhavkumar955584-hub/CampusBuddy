@@ -5,6 +5,7 @@ import com.seniorconnect.audit.service.AuditService;
 import com.seniorconnect.auth.security.UserPrincipal;
 import com.seniorconnect.common.exception.AppException;
 import com.seniorconnect.common.util.SanitizerUtil;
+import com.seniorconnect.gamification.service.BadgeService;
 import com.seniorconnect.profile.dto.SeniorProfileDto;
 import com.seniorconnect.profile.entity.SeniorProfile;
 import com.seniorconnect.profile.repository.SeniorProfileRepository;
@@ -23,15 +24,18 @@ public class SeniorProfileService {
     private final SeniorProfileRepository seniorProfileRepository;
     private final UserRepository userRepository;
     private final AuditService auditService;
+    private final BadgeService badgeService;
 
     public SeniorProfileService(
             SeniorProfileRepository seniorProfileRepository,
             UserRepository userRepository,
-            AuditService auditService
+            AuditService auditService,
+            BadgeService badgeService
     ) {
         this.seniorProfileRepository = seniorProfileRepository;
         this.userRepository = userRepository;
         this.auditService = auditService;
+        this.badgeService = badgeService;
     }
 
     @Transactional
@@ -79,6 +83,7 @@ public class SeniorProfileService {
 
         SeniorProfile profile = getOrCreateProfile(senior);
         profile.setTagVerified(isVerified);
+        badgeService.evaluateAndAwardBadges(profile);
         SeniorProfile saved = seniorProfileRepository.save(profile);
 
         auditService.logEvent(
@@ -95,6 +100,7 @@ public class SeniorProfileService {
     public void addPoints(User senior, int pointsToAdd) {
         SeniorProfile profile = getOrCreateProfile(senior);
         profile.setPoints(profile.getPoints() + pointsToAdd);
+        badgeService.evaluateAndAwardBadges(profile);
         seniorProfileRepository.save(profile);
     }
 

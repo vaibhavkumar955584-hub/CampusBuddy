@@ -34,6 +34,14 @@ spring:
       timeout: 2000ms
 
 seniorconnect:
+  jwt:
+    private-key-path: ${JWT_PRIVATE_KEY_PATH:keys/private.pem}
+    public-key-path: ${JWT_PUBLIC_KEY_PATH:keys/public.pem}
+    access-token-expiration-seconds: 900 # 15 minutes
+    refresh-token-expiration-seconds: 2592000 # 30 days
+    issuer: seniorconnect-auth-server
+  firebase:
+    credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
   security:
     jwt:
       private-key-path: ${JWT_PRIVATE_KEY_PATH:}

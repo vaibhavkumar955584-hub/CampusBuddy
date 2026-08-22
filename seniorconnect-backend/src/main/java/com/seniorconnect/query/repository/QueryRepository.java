@@ -21,6 +21,10 @@ public interface QueryRepository extends JpaRepository<Query, UUID> {
 
     List<Query> findByJuniorOrderByCreatedAtDesc(User junior);
 
-    @org.springframework.data.jpa.repository.Query("SELECT q FROM Query q WHERE LOWER(q.tags) LIKE LOWER(CONCAT('%', :tag, '%')) ORDER BY q.createdAt DESC")
+    @org.springframework.data.jpa.repository.Query(
+            value = "SELECT * FROM queries q WHERE :tag = ANY(q.tags) ORDER BY q.created_at DESC",
+            countQuery = "SELECT count(*) FROM queries q WHERE :tag = ANY(q.tags)",
+            nativeQuery = true
+    )
     Page<Query> findByTagContaining(@Param("tag") String tag, Pageable pageable);
 }

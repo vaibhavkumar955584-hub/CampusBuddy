@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/models/query_model.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/services/firebase_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/screens/role_selection_screen.dart';
+import '../../matching/screens/matched_queries_screen.dart';
+import '../../notifications/screens/notifications_screen.dart';
+import '../../profile/screens/points_badges_screen.dart';
 import '../../reveal/screens/pending_reveals_screen.dart';
 import 'create_query_screen.dart';
 import 'query_detail_screen.dart';
@@ -18,6 +22,7 @@ class QueryFeedScreen extends StatefulWidget {
 
 class _QueryFeedScreenState extends State<QueryFeedScreen> {
   final FirebaseAuthService _authService = FirebaseAuthService();
+  final ApiClient _apiClient = ApiClient();
   List<QueryModel> _queries = [];
   bool _isLoading = true;
   int _selectedNavIndex = 0;
@@ -59,14 +64,14 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
           }).toList();
         });
       } else {
-        // Provide sample queries if empty
+        // Fallback sample data
         setState(() {
           _queries = [
             QueryModel(
               id: 'q1',
               title: 'Tips for cracking IT/Software internships in 3rd year?',
               content: 'Which DSA topics and frameworks are most asked in on-campus placements?',
-              tags: 'Career,Placements',
+              tags: 'Career,Placements,DSA',
               isAnonymousDisplay: true,
               juniorName: 'Anonymous Junior',
               juniorBranch: 'Information Technology',
@@ -81,7 +86,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
               id: 'q2',
               title: 'Best faculty and preparation strategy for OS and DBMS?',
               content: 'Looking for recommended notes, previous papers, and YouTube channels.',
-              tags: 'Academics',
+              tags: 'Academics,OS,DBMS',
               isAnonymousDisplay: false,
               juniorName: 'Aman Sharma',
               juniorBranch: 'Computer Science',
@@ -96,7 +101,6 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
         });
       }
     } catch (_) {
-      // Fallback
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -104,6 +108,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
 
   Future<void> _logout() async {
     await _authService.signOut();
+    await _apiClient.clearSession();
     if (mounted) {
       Navigator.pushReplacement(
         context,
@@ -114,7 +119,9 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final appUser = _apiClient.currentUser;
+    final isSenior = appUser?.isSenior ?? false;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -142,31 +149,51 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
               ),
               const SizedBox(width: 8),
               const Text(
-                'Home',
+                'Campus',
                 style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ],
           ),
         ),
         actions: [
-          if (user != null)
+          if (isSenior)
             IconButton(
-              icon: const Icon(Icons.notifications_none_outlined, color: AppTheme.onSurface),
-              tooltip: 'Reveal Requests',
+              icon: const Icon(Icons.auto_awesome, color: AppTheme.primary),
+              tooltip: 'Matched Queries',
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const PendingRevealsScreen()),
+                  MaterialPageRoute(builder: (_) => const MatchedQueriesScreen()),
                 );
               },
             ),
+          IconButton(
+            icon: const Icon(Icons.notifications_none_outlined, color: AppTheme.onSurface),
+            tooltip: 'Notifications',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.handshake_outlined, color: AppTheme.onSurface),
+            tooltip: 'Reveal Requests',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PendingRevealsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const CircleAvatar(
               radius: 16,
               backgroundColor: AppTheme.primary,
               child: Icon(Icons.person, size: 18, color: Colors.white),
             ),
-            tooltip: 'Logout',
+            tooltip: 'Logout / Profile',
             onPressed: _logout,
           ),
           const SizedBox(width: 8),
@@ -174,7 +201,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
       ),
       body: Column(
         children: [
-          // User Welcome Card with subtle teal tint
+          // User Welcome Banner
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -190,45 +217,61 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                   radius: 20,
                   backgroundColor: const Color(0xFFDFF1F5),
                   child: Text(
-                    (user?.displayName?.isNotEmpty == true)
-                        ? user!.displayName![0].toUpperCase()
-                        : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U'),
+                    (firebaseUser?.displayName?.isNotEmpty == true)
+                        ? firebaseUser!.displayName![0].toUpperCase()
+                        : (firebaseUser?.email?.isNotEmpty == true ? firebaseUser!.email![0].toUpperCase() : 'U'),
                     style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user?.displayName ?? user?.email ?? 'Campus Student',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.onSurface),
-                    ),
-                    Text(
-                      user?.email ?? 'Verified Campus Community',
-                      style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDFF1F5),
-                    borderRadius: BorderRadius.circular(9999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.shield_outlined, color: AppTheme.primary, size: 13),
-                      SizedBox(width: 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        'Verified',
-                        style: TextStyle(color: AppTheme.primary, fontSize: 11, fontWeight: FontWeight.w700),
+                        firebaseUser?.displayName ?? firebaseUser?.email ?? 'Campus Student',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.onSurface),
+                      ),
+                      Text(
+                        isSenior ? 'Senior Mentor • Verified Community' : 'Junior Student • Verified Community',
+                        style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
+                if (isSenior) ...[
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: const Size(0, 32),
+                      backgroundColor: AppTheme.primaryContainer,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PointsBadgesScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.emoji_events, size: 14, color: Colors.white),
+                    label: const Text('Badges', style: TextStyle(fontSize: 11, color: Colors.white)),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDFF1F5),
+                      borderRadius: BorderRadius.circular(9999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.shield_outlined, color: AppTheme.primary, size: 13),
+                        SizedBox(width: 4),
+                        Text('Verified', style: TextStyle(color: AppTheme.primary, fontSize: 11, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -269,14 +312,29 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
           if (idx == 1) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const PendingRevealsScreen()),
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
             );
+          } else if (idx == 2) {
+            if (isSenior) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PointsBadgesScreen()),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PendingRevealsScreen()),
+              );
+            }
           }
         },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications_none_outlined), label: 'Alerts'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Feed'),
+          const BottomNavigationBarItem(icon: Icon(Icons.notifications_none_outlined), label: 'Alerts'),
+          BottomNavigationBarItem(
+            icon: Icon(isSenior ? Icons.emoji_events_outlined : Icons.handshake_outlined),
+            label: isSenior ? 'Badges' : 'Reveals',
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -325,7 +383,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                         color: query.isAnonymousDisplay
                             ? const Color(0xFFF3E8FF)
                             : const Color(0xFFDFF1F5),
-                        borderRadius: BorderRadius.circular(9999), // Pill
+                        borderRadius: BorderRadius.circular(9999),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

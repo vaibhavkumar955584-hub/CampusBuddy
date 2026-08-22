@@ -4,6 +4,7 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/models/query_model.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../moderation/widgets/report_modal.dart';
 
 class QueryDetailScreen extends StatefulWidget {
   final String queryId;
@@ -157,6 +158,26 @@ class _QueryDetailScreenState extends State<QueryDetailScreen> {
                                           icon: const Icon(Icons.handshake_outlined, size: 16),
                                           label: const Text('Request Reveal', style: TextStyle(fontSize: 12)),
                                         ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: const Icon(Icons.flag_outlined, size: 20, color: AppTheme.outline),
+                                        tooltip: 'Report Question',
+                                        onPressed: () {
+                                          if (_query?.juniorId != null) {
+                                            ReportModal.show(
+                                              context,
+                                              targetType: 'QUERY',
+                                              targetId: _query!.id,
+                                              reportedUserId: _query!.juniorId!,
+                                              targetTitle: _query!.title,
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Cannot report anonymous author without admin reveal.')),
+                                            );
+                                          }
+                                        },
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 14),
@@ -259,12 +280,28 @@ class _QueryDetailScreenState extends State<QueryDetailScreen> {
               if (resp.isAcceptedAnswer)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  margin: const EdgeInsets.only(right: 6),
                   decoration: BoxDecoration(
                     color: AppTheme.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text('ACCEPTED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.success)),
                 ),
+              IconButton(
+                icon: const Icon(Icons.flag_outlined, size: 16, color: AppTheme.outline),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Report Response',
+                onPressed: () {
+                  ReportModal.show(
+                    context,
+                    targetType: 'RESPONSE',
+                    targetId: resp.id,
+                    reportedUserId: resp.seniorId,
+                    targetTitle: 'Response by ${resp.seniorName}',
+                  );
+                },
+              ),
             ],
           ),
           const SizedBox(height: 10),

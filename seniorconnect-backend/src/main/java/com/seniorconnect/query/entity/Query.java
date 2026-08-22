@@ -2,11 +2,15 @@ package com.seniorconnect.query.entity;
 
 import com.seniorconnect.user.entity.User;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "queries")
@@ -25,8 +29,9 @@ public class Query {
     @Column(name = "content", nullable = false, length = 5000)
     private String content;
 
-    @Column(name = "tags", length = 500)
-    private String tags;
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "tags", columnDefinition = "text[]")
+    private List<String> tags = new ArrayList<>();
 
     @Column(name = "is_anonymous_display", nullable = false)
     private boolean isAnonymousDisplay = true;
@@ -52,11 +57,31 @@ public class Query {
         this.junior = junior;
         this.title = title;
         this.content = content;
-        this.tags = tags;
+        this.tags = parseTags(tags);
         this.isAnonymousDisplay = isAnonymousDisplay;
         this.status = status != null ? status : QueryStatus.OPEN;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
         this.updatedAt = updatedAt;
+    }
+
+    public Query(UUID id, User junior, String title, String content, List<String> tags, boolean isAnonymousDisplay, QueryStatus status, Instant createdAt, Instant updatedAt) {
+        this.id = id != null ? id : UUID.randomUUID();
+        this.junior = junior;
+        this.title = title;
+        this.content = content;
+        this.tags = tags != null ? tags : new ArrayList<>();
+        this.isAnonymousDisplay = isAnonymousDisplay;
+        this.status = status != null ? status : QueryStatus.OPEN;
+        this.createdAt = createdAt != null ? createdAt : Instant.now();
+        this.updatedAt = updatedAt;
+    }
+
+    private static List<String> parseTags(String raw) {
+        if (raw == null || raw.isBlank()) return new ArrayList<>();
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
     }
 
     @PrePersist
@@ -66,6 +91,9 @@ public class Query {
         }
         if (createdAt == null) {
             createdAt = Instant.now();
+        }
+        if (tags == null) {
+            tags = new ArrayList<>();
         }
     }
 
@@ -107,11 +135,21 @@ public class Query {
     }
 
     public String getTags() {
+        if (tags == null || tags.isEmpty()) return "";
+        return String.join(",", tags);
+    }
+
+    public List<String> getTagsList() {
+        if (tags == null) tags = new ArrayList<>();
         return tags;
     }
 
     public void setTags(String tags) {
-        this.tags = tags;
+        this.tags = parseTags(tags);
+    }
+
+    public void setTagsList(List<String> tags) {
+        this.tags = tags != null ? tags : new ArrayList<>();
     }
 
     public boolean isAnonymousDisplay() {
