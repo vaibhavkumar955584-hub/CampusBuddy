@@ -16,9 +16,24 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.seniorconnect.auth.service.EmailParserService emailParserService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, com.seniorconnect.auth.service.EmailParserService emailParserService) {
         this.authService = authService;
+        this.emailParserService = emailParserService;
+    }
+
+    @PostMapping("/parse-email")
+    public ResponseEntity<ParsedEmailDto> parseEmail(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        ParsedEmailDto parsed = emailParserService.parseCollegeEmail(email);
+        return ResponseEntity.ok(parsed);
+    }
+
+    @GetMapping("/parse-email")
+    public ResponseEntity<ParsedEmailDto> parseEmailQuery(@RequestParam String email) {
+        ParsedEmailDto parsed = emailParserService.parseCollegeEmail(email);
+        return ResponseEntity.ok(parsed);
     }
 
     @PostMapping("/send-otp")

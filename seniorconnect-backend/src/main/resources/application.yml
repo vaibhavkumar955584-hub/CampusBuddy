@@ -48,6 +48,27 @@ seniorconnect:
     queries-per-day: 5
     responses-per-day: 20
     reveals-per-day: 10
+  email-parsing:
+    required-domain: galgotiacollege.edu
+    college-prefix: gce
+    academic-start-month: 7 # July
+    branches:
+      bit: "Information Technology"
+      it: "Information Technology"
+      bcs: "Computer Science & Engineering"
+      cse: "Computer Science & Engineering"
+      bce: "Electronics & Communication Engineering"
+      ece: "Electronics & Communication Engineering"
+      bee: "Electrical & Electronics Engineering"
+      eee: "Electrical & Electronics Engineering"
+      bme: "Mechanical Engineering"
+      me: "Mechanical Engineering"
+      bcv: "Civil Engineering"
+      ce: "Civil Engineering"
+      bai: "Artificial Intelligence & Machine Learning"
+      aiml: "Artificial Intelligence & Machine Learning"
+      bds: "Data Science"
+      ds: "Data Science"
 
 logging:
   level:

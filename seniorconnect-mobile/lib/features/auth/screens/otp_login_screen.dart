@@ -4,7 +4,7 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../queries/screens/query_feed_screen.dart';
+import 'profile_setup_screen.dart';
 
 class OtpLoginScreen extends StatefulWidget {
   const OtpLoginScreen({super.key});
@@ -14,19 +14,31 @@ class OtpLoginScreen extends StatefulWidget {
 }
 
 class _OtpLoginScreenState extends State<OtpLoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _emailPrefixController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _branchController = TextEditingController();
 
   String _selectedRole = 'JUNIOR';
   bool _otpSent = false;
   bool _isLoading = false;
   String? _errorMessage;
 
+  final String _fixedDomain = '@galgotiacollege.edu';
   final ApiClient _apiClient = ApiClient();
 
+  String get _fullEmail {
+    String prefix = _emailPrefixController.text.trim();
+    if (prefix.endsWith(_fixedDomain)) {
+      return prefix;
+    }
+    return '$prefix$_fixedDomain';
+  }
+
   Future<void> _sendOtp() async {
+    if (_emailPrefixController.text.trim().isEmpty) {
+      setState(() => _errorMessage = 'Please enter your college roll/email ID.');
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -36,11 +48,9 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
       final res = await _apiClient.post(
         ApiConstants.sendOtp,
         body: {
-          'email': _emailController.text.trim(),
+          'email': _fullEmail,
           'role': _selectedRole,
-          'fullName': _nameController.text.trim(),
-          'branch': _branchController.text.trim(),
-          'semester': 4,
+          'fullName': _emailPrefixController.text.trim().split('.')[0],
         },
       );
 
@@ -73,9 +83,9 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
 
     try {
       final res = await _apiClient.post(
-        '${ApiConstants.verifyOtp}?role=$_selectedRole&fullName=${Uri.encodeComponent(_nameController.text.trim())}&branch=${Uri.encodeComponent(_branchController.text.trim())}',
+        '${ApiConstants.verifyOtp}?role=$_selectedRole',
         body: {
-          'email': _emailController.text.trim(),
+          'email': _fullEmail,
           'otp': _otpController.text.trim(),
           'deviceFingerprint': 'mobile-app-client',
         },
@@ -89,10 +99,27 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
         );
         _apiClient.currentUser = UserModel.fromJson(data['user']);
 
+        // Fetch smart email parsing prefill data
+        Map<String, dynamic>? parsedData;
+        try {
+          final parseRes = await _apiClient.post(
+            '${ApiConstants.baseUrl}/auth/parse-email',
+            body: {'email': _fullEmail},
+          );
+          if (parseRes.statusCode == 200) {
+            parsedData = jsonDecode(parseRes.body);
+          }
+        } catch (_) {}
+
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const QueryFeedScreen()),
+            MaterialPageRoute(
+              builder: (_) => ProfileSetupScreen(
+                email: _fullEmail,
+                parsedData: parsedData,
+              ),
+            ),
           );
         }
       } else {
@@ -125,7 +152,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.15),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Icon(Icons.shield_outlined, color: AppTheme.primaryLight, size: 36),
@@ -145,9 +172,9 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppTheme.dangerColor.withOpacity(0.15),
+                      color: AppTheme.dangerColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.dangerColor.withOpacity(0.3)),
+                      border: Border.all(color: AppTheme.dangerColor.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -187,35 +214,33 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const Text('College Email', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  const Text('College Email ID', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   const SizedBox(height: 8),
                   TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g. student@galgotiacollege.edu.in',
-                      prefixIcon: Icon(Icons.school_outlined, size: 20),
+                    controller: _emailPrefixController,
+                    keyboardType: TextInputType.text,
+                    decoration: InputDecoration(
+                      hintText: 'vk.24gcebit093',
+                      prefixIcon: const Icon(Icons.school_outlined, size: 20),
+                      suffixIcon: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        child: Text(
+                          _fixedDomain,
+                          style: const TextStyle(color: AppTheme.primaryLight, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Full Name', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g. Alex Sharma',
-                      prefixIcon: Icon(Icons.person_outline, size: 20),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Branch / Major', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _branchController,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g. Computer Science & Engineering',
-                      prefixIcon: Icon(Icons.account_tree_outlined, size: 20),
-                    ),
+                  const SizedBox(height: 6),
+                  const Row(
+                    children: [
+                      Icon(Icons.auto_awesome, size: 13, color: AppTheme.accentColor),
+                      SizedBox(width: 6),
+                      Text(
+                        "We'll auto-detect your branch and year from this",
+                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 28),
                   SizedBox(
@@ -230,7 +255,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                   ),
                 ] else ...[
                   Text(
-                    'Enter the 6-digit code sent to ${_emailController.text}',
+                    'Enter the 6-digit code sent to $_fullEmail',
                     style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
                   ),
                   const SizedBox(height: 24),
@@ -253,7 +278,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                       onPressed: _isLoading ? null : _verifyOtp,
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
-                          : const Text('Verify & Enter'),
+                          : const Text('Verify & Continue to Profile Setup'),
                     ),
                   ),
                   const SizedBox(height: 14),

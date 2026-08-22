@@ -124,4 +124,6 @@ CREATE TABLE senior_profiles (
 INSERT INTO allowed_domains (id, domain, college_name, is_active, created_at)
 VALUES ('00000000-0000-0000-0000-000000000001', 'galgotiacollege.edu.in', 'Galgotias College of Engineering and Technology', TRUE, CURRENT_TIMESTAMP);
 INSERT INTO allowed_domains (id, domain, college_name, is_active, created_at)
-VALUES ('00000000-0000-0000-0000-000000000002', 'campus.edu', 'Test Campus Institution', TRUE, CURRENT_TIMESTAMP);
+VALUES ('00000000-0000-0000-0000-000000000002', 'galgotiacollege.edu', 'Galgotias College of Engineering and Technology', TRUE, CURRENT_TIMESTAMP);
+INSERT INTO allowed_domains (id, domain, college_name, is_active, created_at)
+VALUES ('00000000-0000-0000-0000-000000000003', 'campus.edu', 'Test Campus Institution', TRUE, CURRENT_TIMESTAMP);
