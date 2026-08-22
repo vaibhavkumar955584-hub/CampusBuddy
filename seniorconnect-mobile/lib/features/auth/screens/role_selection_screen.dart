@@ -10,29 +10,29 @@ class RoleSelectionScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
               Text(
                 'Welcome to SeniorConnect',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: 26,
+                      fontSize: 24,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.onSurface,
                     ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 "To get started, tell us how you'd like to use the app today.",
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppTheme.onSurfaceVariant,
-                      fontSize: 15,
+                      fontSize: 14,
                     ),
               ),
-              const SizedBox(height: 36),
+              const SizedBox(height: 24),
               // Junior Card
               _buildRoleCard(
                 context,
@@ -42,7 +42,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 iconBgColor: AppTheme.primaryContainer,
                 role: 'JUNIOR',
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               // Senior Card
               _buildRoleCard(
                 context,
@@ -52,7 +52,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 iconBgColor: AppTheme.secondaryContainer,
                 role: 'SENIOR',
               ),
-              const Spacer(),
+              const SizedBox(height: 24),
               Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

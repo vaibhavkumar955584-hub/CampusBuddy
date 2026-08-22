@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/network/api_client.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../queries/screens/query_feed_screen.dart';
 
@@ -18,7 +19,7 @@ class ProfileSetupScreen extends StatefulWidget {
 }
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
-  final ApiClient _apiClient = ApiClient();
+  final FirestoreService _firestoreService = FirestoreService();
 
   late TextEditingController _nameController;
   late TextEditingController _branchController;
@@ -54,7 +55,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final p = widget.parsedData;
 
     _nameController = TextEditingController(
-      text: _apiClient.currentUser?.fullName ?? widget.email.split('@')[0],
+      text: FirebaseAuth.instance.currentUser?.displayName ?? widget.email.split('@')[0],
     );
 
     String defaultBranch = p != null && p['branchName'] != null
@@ -99,6 +100,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await _firestoreService.createUserProfile(
+          uid: user.uid,
+          email: user.email ?? widget.email,
+          fullName: _nameController.text.trim(),
+          role: 'STUDENT',
+          branch: _branchController.text.trim(),
+          skills: _tags,
+        );
+      }
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -106,6 +119,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         );
       }
     } catch (_) {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const QueryFeedScreen()),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -251,7 +270,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               const Text('Branch / Department', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.onSurface)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _standardBranches.contains(_branchController.text)
+                initialValue: _standardBranches.contains(_branchController.text)
                     ? _branchController.text
                     : 'Other / Dual Degree',
                 decoration: const InputDecoration(
@@ -288,7 +307,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedYearOfStudy,
+                initialValue: _selectedYearOfStudy,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.calendar_today_outlined, size: 20, color: AppTheme.outline),
                 ),

@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../../core/constants/api_constants.dart';
-import '../../../core/network/api_client.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../core/theme/app_theme.dart';
 
 class CreateQueryScreen extends StatefulWidget {
@@ -29,7 +28,7 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
   ];
 
   final Set<String> _selectedTags = {'Academics'};
-  final ApiClient _apiClient = ApiClient();
+  final FirestoreService _firestoreService = FirestoreService();
 
   void _toggleTag(String tag) {
     setState(() {
@@ -53,26 +52,23 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
     });
 
     try {
-      final res = await _apiClient.post(
-        ApiConstants.queries,
-        body: {
-          'title': _titleController.text.trim(),
-          'content': _contentController.text.trim(),
-          'tags': _selectedTags.join(','),
-          'isAnonymousDisplay': _isAnonymous,
-        },
+      final user = FirebaseAuth.instance.currentUser;
+      await _firestoreService.createQuery(
+        authorUid: user?.uid ?? 'anonymous',
+        authorName: user?.displayName ?? 'Junior Student',
+        title: _titleController.text.trim(),
+        content: _contentController.text.trim(),
+        category: _selectedTags.isNotEmpty ? _selectedTags.first : 'General',
+        targetBranch: 'Any Branch',
+        targetGraduationYear: 2026,
+        isAnonymous: _isAnonymous,
       );
 
-      if (res.statusCode == 201) {
-        if (mounted) Navigator.pop(context, true);
-      } else {
-        final err = jsonDecode(res.body);
-        setState(() => _errorMessage = err['message'] ?? 'Failed to post question');
-      }
+      if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      setState(() => _errorMessage = 'Network error while posting query.');
+      setState(() => _errorMessage = 'Error posting question: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -266,7 +262,7 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
                         ),
                         Switch(
                           value: _isAnonymous,
-                          activeColor: AppTheme.primary,
+                          activeThumbColor: AppTheme.primary,
                           onChanged: (val) => setState(() => _isAnonymous = val),
                         ),
                       ],

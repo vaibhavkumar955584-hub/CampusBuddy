@@ -4,12 +4,19 @@
 *.pem
 *.key
 *.p12
+google-services.json
+**/google-services.json
+*firebase*.json
+*service-account*.json
 
 # Maven / Java
 target/
 *.class
 *.jar
 *.war
+*.mv.db
+*.trace.db
+seniorconnect-backend/data/
 .idea/
 *.iml
 .settings/

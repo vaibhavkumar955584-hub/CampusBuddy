@@ -1,7 +1,8 @@
 class ApiConstants {
-  static const String baseUrl = 'http://localhost:8080/api/v1';
+  static const String baseUrl = 'http://localhost:8088/api/v1';
 
   // Auth endpoints
+  static const String directLogin = '$baseUrl/auth/direct-login';
   static const String sendOtp = '$baseUrl/auth/send-otp';
   static const String verifyOtp = '$baseUrl/auth/verify-otp';
   static const String refresh = '$baseUrl/auth/refresh';

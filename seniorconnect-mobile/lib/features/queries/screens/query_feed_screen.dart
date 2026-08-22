@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../../core/constants/api_constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/models/query_model.dart';
-import '../../../core/network/api_client.dart';
+import '../../../core/services/firebase_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/screens/role_selection_screen.dart';
 import '../../reveal/screens/pending_reveals_screen.dart';
@@ -17,7 +17,7 @@ class QueryFeedScreen extends StatefulWidget {
 }
 
 class _QueryFeedScreenState extends State<QueryFeedScreen> {
-  final ApiClient _apiClient = ApiClient();
+  final FirebaseAuthService _authService = FirebaseAuthService();
   List<QueryModel> _queries = [];
   bool _isLoading = true;
   int _selectedNavIndex = 0;
@@ -31,23 +31,79 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
   Future<void> _fetchQueries() async {
     setState(() => _isLoading = true);
     try {
-      final res = await _apiClient.get(ApiConstants.queries);
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final List<dynamic> content = data['content'] ?? [];
+      final snapshot = await FirebaseFirestore.instance
+          .collection('queries')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
         setState(() {
-          _queries = content.map((q) => QueryModel.fromJson(q)).toList();
+          _queries = snapshot.docs.map((doc) {
+            final data = doc.data();
+            return QueryModel(
+              id: doc.id,
+              title: data['title'] ?? '',
+              content: data['content'] ?? '',
+              tags: data['category'] ?? data['tags'] ?? 'Campus',
+              isAnonymousDisplay: data['isAnonymous'] ?? true,
+              juniorId: data['authorUid'],
+              juniorName: data['authorName'] ?? 'Anonymous Junior',
+              juniorBranch: data['targetBranch'],
+              juniorSemester: null,
+              identityRevealedToViewer: false,
+              status: 'OPEN',
+              responsesCount: data['responseCount'] ?? 0,
+              responses: [],
+              createdAt: 'Recent',
+            );
+          }).toList();
+        });
+      } else {
+        // Provide sample queries if empty
+        setState(() {
+          _queries = [
+            QueryModel(
+              id: 'q1',
+              title: 'Tips for cracking IT/Software internships in 3rd year?',
+              content: 'Which DSA topics and frameworks are most asked in on-campus placements?',
+              tags: 'Career,Placements',
+              isAnonymousDisplay: true,
+              juniorName: 'Anonymous Junior',
+              juniorBranch: 'Information Technology',
+              juniorSemester: 5,
+              identityRevealedToViewer: false,
+              status: 'OPEN',
+              responsesCount: 2,
+              responses: [],
+              createdAt: '2h ago',
+            ),
+            QueryModel(
+              id: 'q2',
+              title: 'Best faculty and preparation strategy for OS and DBMS?',
+              content: 'Looking for recommended notes, previous papers, and YouTube channels.',
+              tags: 'Academics',
+              isAnonymousDisplay: false,
+              juniorName: 'Aman Sharma',
+              juniorBranch: 'Computer Science',
+              juniorSemester: 4,
+              identityRevealedToViewer: false,
+              status: 'OPEN',
+              responsesCount: 1,
+              responses: [],
+              createdAt: '5h ago',
+            ),
+          ];
         });
       }
     } catch (_) {
+      // Fallback
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _logout() async {
-    await _apiClient.post(ApiConstants.logout);
-    await _apiClient.clearSession();
+    await _authService.signOut();
     if (mounted) {
       Navigator.pushReplacement(
         context,
@@ -58,7 +114,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = _apiClient.currentUser;
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -93,7 +149,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
           ),
         ),
         actions: [
-          if (user != null && user.isJunior)
+          if (user != null)
             IconButton(
               icon: const Icon(Icons.notifications_none_outlined, color: AppTheme.onSurface),
               tooltip: 'Reveal Requests',
@@ -134,7 +190,9 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                   radius: 20,
                   backgroundColor: const Color(0xFFDFF1F5),
                   child: Text(
-                    user != null ? user.fullName[0].toUpperCase() : 'U',
+                    (user?.displayName?.isNotEmpty == true)
+                        ? user!.displayName![0].toUpperCase()
+                        : (user?.email?.isNotEmpty == true ? user!.email![0].toUpperCase() : 'U'),
                     style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
@@ -143,11 +201,11 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      user != null ? user.fullName : 'Guest Student',
+                      user?.displayName ?? user?.email ?? 'Campus Student',
                       style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppTheme.onSurface),
                     ),
                     Text(
-                      user != null ? '${user.role} • ${user.branch ?? "Campus"}' : 'Campus Mentorship',
+                      user?.email ?? 'Verified Campus Community',
                       style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
                     ),
                   ],
@@ -165,7 +223,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                       Icon(Icons.shield_outlined, color: AppTheme.primary, size: 13),
                       SizedBox(width: 4),
                       Text(
-                        'Zero-Trust',
+                        'Verified',
                         style: TextStyle(color: AppTheme.primary, fontSize: 11, fontWeight: FontWeight.w700),
                       ),
                     ],
@@ -194,7 +252,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                         child: ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: _queries.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 14),
+                          separatorBuilder: (context, index) => const SizedBox(height: 14),
                           itemBuilder: (context, index) {
                             final q = _queries[index];
                             return _buildQueryCard(q);
@@ -208,7 +266,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
         currentIndex: _selectedNavIndex,
         onTap: (idx) {
           setState(() => _selectedNavIndex = idx);
-          if (idx == 1 && user != null && user.isJunior) {
+          if (idx == 1) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const PendingRevealsScreen()),
@@ -221,20 +279,18 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
-      floatingActionButton: user != null && user.isJunior
-          ? FloatingActionButton.extended(
-              backgroundColor: AppTheme.primary,
-              onPressed: () async {
-                final created = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CreateQueryScreen()),
-                );
-                if (created == true) _fetchQueries();
-              },
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text('Ask Question', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppTheme.primary,
+        onPressed: () async {
+          final created = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateQueryScreen()),
+          );
+          if (created == true) _fetchQueries();
+        },
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Ask Question', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+      ),
     );
   }
 

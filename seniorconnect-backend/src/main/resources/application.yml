@@ -36,6 +36,8 @@ spring:
 seniorconnect:
   security:
     jwt:
+      private-key-path: ${JWT_PRIVATE_KEY_PATH:}
+      public-key-path: ${JWT_PUBLIC_KEY_PATH:}
       access-token-expiration-seconds: 900 # 15 minutes
       refresh-token-expiration-seconds: 2592000 # 30 days
       issuer: seniorconnect-auth-server

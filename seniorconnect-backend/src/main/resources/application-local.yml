@@ -1,0 +1,71 @@
+server:
+  port: 8088
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: seniorconnect-backend
+  datasource:
+    url: jdbc:h2:file:./data/seniorconnect_local;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 500ms
+
+seniorconnect:
+  security:
+    jwt:
+      access-token-expiration-seconds: 900 # 15 minutes
+      refresh-token-expiration-seconds: 2592000 # 30 days
+      issuer: seniorconnect-auth-server
+    otp:
+      expiration-seconds: 300 # 5 minutes
+      max-attempts: 5
+      lockout-seconds: 900 # 15 minutes
+  ratelimit:
+    auth-requests-per-hour: 20
+    queries-per-day: 20
+    responses-per-day: 50
+    reveals-per-day: 20
+  email-parsing:
+    required-domain: galgotiacollege.edu
+    college-prefix: gce
+    academic-start-month: 7 # July
+    branches:
+      bit: "Information Technology"
+      it: "Information Technology"
+      bcs: "Computer Science & Engineering"
+      cse: "Computer Science & Engineering"
+      bce: "Electronics & Communication Engineering"
+      ece: "Electronics & Communication Engineering"
+      bee: "Electrical & Electronics Engineering"
+      eee: "Electrical & Electronics Engineering"
+      bme: "Mechanical Engineering"
+      me: "Mechanical Engineering"
+      bcv: "Civil Engineering"
+      ce: "Civil Engineering"
+      bai: "Artificial Intelligence & Machine Learning"
+      aiml: "Artificial Intelligence & Machine Learning"
+      bds: "Data Science"
+      ds: "Data Science"
+
+logging:
+  level:
+    com.seniorconnect: INFO
+    org.springframework.security: WARN

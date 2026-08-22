@@ -29,10 +29,16 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final com.seniorconnect.common.security.RlsSessionFilter rlsSessionFilter;
     private final ObjectMapper objectMapper;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, ObjectMapper objectMapper) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            com.seniorconnect.common.security.RlsSessionFilter rlsSessionFilter,
+            ObjectMapper objectMapper
+    ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.rlsSessionFilter = rlsSessionFilter;
         this.objectMapper = objectMapper;
     }
 
@@ -51,7 +57,8 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**", "/actuator/health", "/actuator/info", "/h2-console/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rlsSessionFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

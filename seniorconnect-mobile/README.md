@@ -1,17 +1,27 @@
-# seniorconnect_mobile
+# SeniorConnect Mobile (Flutter)
 
-A new Flutter project.
+Campus mentorship platform mobile application with role-based routing, JWT RS256 token lifecycle, Google Sign-In, query/response feed, reveals, and moderation.
 
-## Getting Started
+## Setup Instructions
 
-This project is a starting point for a Flutter application.
+### 1. Prerequisites
+- Flutter SDK (>= 3.3.0)
+- Java 21 JDK (for Android builds)
+- Android Studio / Android SDK
 
-A few resources to get you started if this is your first Flutter project:
+### 2. Firebase & Google Sign-In Configuration
+1. Copy `android/app/google-services.json.template` to `android/app/google-services.json`:
+   ```bash
+   cp android/app/google-services.json.template android/app/google-services.json
+   ```
+2. In your Firebase Console:
+   - Create an Android App with package name `com.seniorconnect.seniorconnect_mobile`.
+   - Add your debug SHA-1 signing certificate fingerprint.
+   - Download the generated `google-services.json` and replace the placeholder fields in `android/app/google-services.json`.
+3. Enable **Google Sign-In** and **Anonymous/Phone/Email** providers under Firebase Authentication.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 3. Running the App
+```bash
+flutter pub get
+flutter run
+```
