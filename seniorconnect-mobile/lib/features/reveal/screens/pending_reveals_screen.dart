@@ -14,7 +14,7 @@ class PendingRevealsScreen extends StatefulWidget {
 
 class _PendingRevealsScreenState extends State<PendingRevealsScreen> {
   final ApiClient _apiClient = ApiClient();
-  List<RevealModel> _pendingReveals = [];
+  List<RevealModel> _reveals = [];
   bool _isLoading = true;
 
   @override
@@ -26,11 +26,11 @@ class _PendingRevealsScreenState extends State<PendingRevealsScreen> {
   Future<void> _fetchPendingReveals() async {
     setState(() => _isLoading = true);
     try {
-      final res = await _apiClient.get('${ApiConstants.reveals}/pending');
+      final res = await _apiClient.get(ApiConstants.pendingReveals);
       if (res.statusCode == 200) {
-        final List<dynamic> list = jsonDecode(res.body);
+        final List<dynamic> data = jsonDecode(res.body);
         setState(() {
-          _pendingReveals = list.map((r) => RevealModel.fromJson(r)).toList();
+          _reveals = data.map((r) => RevealModel.fromJson(r)).toList();
         });
       }
     } catch (_) {
@@ -39,16 +39,14 @@ class _PendingRevealsScreenState extends State<PendingRevealsScreen> {
     }
   }
 
-  Future<void> _respondToReveal(String revealRequestId, bool accept) async {
+  Future<void> _respondToReveal(String revealId, String action) async {
     try {
-      final res = await _apiClient.post('${ApiConstants.reveals}/$revealRequestId/respond?accept=$accept');
+      final res = await _apiClient.post(
+        ApiConstants.respondReveal(revealId),
+        body: {'action': action},
+      );
       if (res.statusCode == 200) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(accept ? 'Identity shared with mentor!' : 'Reveal request declined.')),
-          );
-        }
-        await _fetchPendingReveals();
+        _fetchPendingReveals();
       }
     } catch (_) {}
   }
@@ -56,101 +54,94 @@ class _PendingRevealsScreenState extends State<PendingRevealsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.darkSurface,
-        title: const Text('Identity Disclosure Requests', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        backgroundColor: AppTheme.background,
         elevation: 0,
+        title: const Text('Identity Reveal Requests', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppTheme.onSurface)),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryLight))
-          : _pendingReveals.isEmpty
-              ? Center(
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          : _reveals.isEmpty
+              ? const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.lock_outline, size: 54, color: AppTheme.textSecondary.withOpacity(0.5)),
-                      const SizedBox(height: 14),
-                      const Text(
-                        'No pending reveal requests',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Your anonymity is protected across all active queries.',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                      ),
+                      Icon(Icons.mark_email_read_outlined, size: 54, color: AppTheme.outlineVariant),
+                      SizedBox(height: 12),
+                      Text('No pending identity reveal requests', style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 15)),
                     ],
                   ),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.all(18),
-                  itemCount: _pendingReveals.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _reveals.length,
+                  separatorBuilder: (ctx, idx) => const SizedBox(height: 14),
                   itemBuilder: (context, index) {
-                    final req = _pendingReveals[index];
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.person_pin_outlined, color: AppTheme.primaryLight, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  req.seniorName,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    final rev = _reveals[index];
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.cardBorder),
+                        boxShadow: const [AppTheme.ambientShadow],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: AppTheme.primaryContainer,
+                                child: Text(rev.seniorName[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  rev.seniorName,
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.onSurface),
                                 ),
-                                const Spacer(),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    'Pending Your Approval',
-                                    style: TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.w600),
-                                  ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.warning.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Mentor is requesting to connect directly on your question:',
-                              style: TextStyle(color: AppTheme.textSecondary.withOpacity(0.8), fontSize: 13),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '"${req.queryTitle}"',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                            ),
-                            const SizedBox(height: 18),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () => _respondToReveal(req.id, false),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.dangerColor,
-                                      side: const BorderSide(color: AppTheme.dangerColor),
-                                    ),
-                                    child: const Text('Decline'),
+                                child: const Text('PENDING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.warning)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Requested to connect on: "${rev.queryTitle}"',
+                            style: const TextStyle(color: AppTheme.onSurface, fontSize: 14, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.secondary,
+                                    side: const BorderSide(color: AppTheme.secondary),
                                   ),
+                                  onPressed: () => _respondToReveal(rev.id, 'REJECT'),
+                                  child: const Text('Decline'),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () => _respondToReveal(req.id, true),
-                                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentColor),
-                                    child: const Text('Allow Reveal'),
-                                  ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => _respondToReveal(rev.id, 'ACCEPT'),
+                                  child: const Text('Accept & Reveal'),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     );
                   },

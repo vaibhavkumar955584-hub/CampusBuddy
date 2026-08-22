@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'core/network/api_client.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/screens/otp_login_screen.dart';
+import 'features/auth/screens/role_selection_screen.dart';
 import 'features/queries/screens/query_feed_screen.dart';
 
 void main() async {
@@ -40,16 +40,17 @@ class _SeniorConnectAppState extends State<SeniorConnectApp> {
     return MaterialApp(
       title: 'SeniorConnect',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
       home: _isCheckingAuth
           ? const Scaffold(
+              backgroundColor: AppTheme.background,
               body: Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryLight),
+                child: CircularProgressIndicator(color: AppTheme.primary),
               ),
             )
           : _isAuthenticated
               ? const QueryFeedScreen()
-              : const OtpLoginScreen(),
+              : const RoleSelectionScreen(),
     );
   }
 }

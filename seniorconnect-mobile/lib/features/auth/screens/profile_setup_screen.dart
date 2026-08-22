@@ -99,7 +99,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Profile data confirmed by user
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -120,29 +119,82 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final isAutoMatched = p != null && p['isMatched'] == true;
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.darkSurface,
-        title: const Text('Review & Customize Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        backgroundColor: AppTheme.background,
         elevation: 0,
+        leadingWidth: 100,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Center(
+                  child: Text(
+                    'SC',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Home',
+                style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const CircleAvatar(
+              radius: 16,
+              backgroundColor: AppTheme.primary,
+              child: Icon(Icons.person, size: 18, color: Colors.white),
+            ),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text(
+                'Customize Profile',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.onSurface,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Review the auto-detected information below and personalize your academic tags.',
+                style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 14),
+              ),
+              const SizedBox(height: 20),
               if (isAutoMatched)
                 Container(
                   padding: const EdgeInsets.all(14),
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentColor.withValues(alpha: 0.12),
+                    color: const Color(0xFFDFF1F5),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.accentColor.withValues(alpha: 0.3)),
+                    border: Border.all(color: const Color(0xFFBCE3EC)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.auto_awesome, color: AppTheme.accentColor, size: 22),
+                      const Icon(Icons.auto_awesome, color: AppTheme.primary, size: 22),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -150,12 +202,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           children: [
                             const Text(
                               'Smart Email Parsing Active',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentColor, fontSize: 13),
+                              style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Pre-filled from roll format (${p['batchLabel'] ?? ""}, ${p['branchCode']?.toString().toUpperCase() ?? ""}). Review and edit below:',
-                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                              'Pre-filled from roll format (${p['batchLabel'] ?? ""}, ${p['branchCode']?.toString().toUpperCase() ?? ""}). Editable for lateral-entry & repeaters.',
+                              style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
                             ),
                           ],
                         ),
@@ -168,44 +220,44 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   padding: const EdgeInsets.all(14),
                   margin: const EdgeInsets.only(bottom: 24),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                    color: AppTheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppTheme.outlineVariant),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.info_outline, color: AppTheme.primaryLight, size: 20),
+                      Icon(Icons.info_outline, color: AppTheme.primary, size: 20),
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Non-standard roll format detected. Please select your branch and academic year manually.',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-              const Text('Full Name', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              const Text('Full Name', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.onSurface)),
               const SizedBox(height: 8),
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.person_outline, size: 20),
+                  prefixIcon: Icon(Icons.person_outline, size: 20, color: AppTheme.outline),
                 ),
               ),
 
               const SizedBox(height: 20),
-              const Text('Branch / Department', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              const Text('Branch / Department', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.onSurface)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _standardBranches.contains(_branchController.text)
                     ? _branchController.text
                     : 'Other / Dual Degree',
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.school_outlined, size: 20),
+                  prefixIcon: Icon(Icons.school_outlined, size: 20, color: AppTheme.outline),
                 ),
-                dropdownColor: AppTheme.darkSurface,
+                dropdownColor: AppTheme.surfaceContainerLowest,
                 items: _standardBranches.map((b) {
                   return DropdownMenuItem(value: b, child: Text(b, style: const TextStyle(fontSize: 14)));
                 }).toList(),
@@ -223,14 +275,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Year of Study', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  const Text('Year of Study', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.onSurface)),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppTheme.darkCard,
+                      color: AppTheme.surfaceContainer,
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text('Editable for lateral/repeaters', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+                    child: const Text('Editable', style: TextStyle(fontSize: 11, color: AppTheme.onSurfaceVariant)),
                   ),
                 ],
               ),
@@ -238,9 +290,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               DropdownButtonFormField<String>(
                 value: _selectedYearOfStudy,
                 decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.calendar_today_outlined, size: 20),
+                  prefixIcon: Icon(Icons.calendar_today_outlined, size: 20, color: AppTheme.outline),
                 ),
-                dropdownColor: AppTheme.darkSurface,
+                dropdownColor: AppTheme.surfaceContainerLowest,
                 items: _yearOptions.map((y) {
                   return DropdownMenuItem(value: y, child: Text(y, style: const TextStyle(fontSize: 14)));
                 }).toList(),
@@ -252,23 +304,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
 
               const SizedBox(height: 24),
-              const Text('Auto-Generated Profile Tags (Editable)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              const Text('Auto-Generated Profile Tags (Pills)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.onSurface)),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: _tags.map((tag) {
                   return Chip(
-                    backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.18),
-                    side: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.4)),
-                    label: Text(tag, style: const TextStyle(fontSize: 12, color: AppTheme.primaryLight)),
-                    deleteIcon: const Icon(Icons.close, size: 14, color: AppTheme.primaryLight),
+                    backgroundColor: const Color(0xFFDFF1F5),
+                    side: const BorderSide(color: Color(0xFFC8E4EB)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+                    label: Text(tag, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+                    deleteIcon: const Icon(Icons.close, size: 14, color: AppTheme.primary),
                     onDeleted: () => _removeTag(tag),
                   );
                 }).toList(),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -276,7 +329,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       controller: _customTagController,
                       decoration: const InputDecoration(
                         hintText: 'Add custom tag (e.g. Flutter, Placements)...',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
                       onSubmitted: (_) => _addTag(),
                     ),
@@ -284,25 +337,30 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   const SizedBox(width: 8),
                   IconButton(
                     onPressed: _addTag,
-                    icon: const Icon(Icons.add_circle, color: AppTheme.primaryLight, size: 28),
+                    icon: const Icon(Icons.add_circle, color: AppTheme.primary, size: 28),
                   ),
                 ],
               ),
 
               const SizedBox(height: 36),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveAndContinue,
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
-                      : const Text('Confirm & Enter Campus Feed'),
-                ),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _saveAndContinue,
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
+                    : const Text('Confirm & Enter Campus Feed'),
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 2,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications_none_outlined), label: 'Alerts'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+        ],
       ),
     );
   }

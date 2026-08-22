@@ -9,9 +9,12 @@ class ApiConstants {
 
   // Queries
   static const String queries = '$baseUrl/queries';
+  static String responses(String queryId) => '$queries/$queryId/responses';
 
   // Reveals
   static const String reveals = '$baseUrl/reveals';
+  static const String pendingReveals = '$reveals/pending';
+  static String respondReveal(String revealId) => '$reveals/$revealId/respond';
 
   // Moderation
   static const String moderation = '$baseUrl/moderation';
