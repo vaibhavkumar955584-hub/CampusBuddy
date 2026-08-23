@@ -8,9 +8,17 @@ ALTER TABLE reveal_requests FORCE ROW LEVEL SECURITY;
 
 -- 2. Create dedicated, least-privileged runtime application role
 DO $$
+DECLARE
+    app_pwd text := current_setting('seniorconnect.app_db_password', true);
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'seniorconnect_app') THEN
-        CREATE ROLE seniorconnect_app LOGIN PASSWORD 'seniorconnect_app_secret' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+        IF app_pwd IS NOT NULL AND app_pwd <> '' THEN
+            EXECUTE format('CREATE ROLE seniorconnect_app LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE', app_pwd);
+        ELSE
+            CREATE ROLE seniorconnect_app LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+        END IF;
+    ELSIF app_pwd IS NOT NULL AND app_pwd <> '' THEN
+        EXECUTE format('ALTER ROLE seniorconnect_app WITH PASSWORD %L', app_pwd);
     END IF;
 END
 $$;
