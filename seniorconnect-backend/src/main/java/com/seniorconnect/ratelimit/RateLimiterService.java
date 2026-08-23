@@ -51,7 +51,7 @@ public class RateLimiterService {
                 redisTemplate.expire(redisKey, java.time.Duration.ofSeconds(windowSeconds * 2));
                 return true;
             } catch (Exception e) {
-                log.warn("Redis rate-limiter failed, falling back to in-memory sliding window: {}", e.getMessage());
+                log.error("CRITICAL: Redis rate-limiter unavailable, falling back to local in-memory sliding window for key '{}'. (Rate limiting is enforced per-instance during this outage). Error: {}", key, e.getMessage());
             }
         }
 
@@ -84,5 +84,33 @@ public class RateLimiterService {
             }
         }
         localSlidingWindows.remove(key);
+    }
+
+    /**
+     * Periodic cleanup task to prune empty and expired sliding window deques from memory,
+     * preventing unbounded map growth under sustained traffic with high key cardinality.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 60000)
+    public void cleanupExpiredWindows() {
+        cleanupExpiredWindows(86400000L); // Clean windows older than 24 hours or empty
+    }
+
+    public void cleanupExpiredWindows(long maxAgeMs) {
+        long now = System.currentTimeMillis();
+        long threshold = now - maxAgeMs;
+
+        localSlidingWindows.entrySet().removeIf(entry -> {
+            ConcurrentLinkedDeque<Long> deque = entry.getValue();
+            synchronized (deque) {
+                while (!deque.isEmpty() && deque.peekFirst() <= threshold) {
+                    deque.pollFirst();
+                }
+                return deque.isEmpty();
+            }
+        });
+    }
+
+    public int getLocalSlidingWindowsCount() {
+        return localSlidingWindows.size();
     }
 }

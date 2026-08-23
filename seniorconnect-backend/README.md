@@ -57,10 +57,25 @@ The `audit_logs` table provides a tamper-evident audit trail:
 
 ---
 
-## 4. Continuous Integration (CI) (Gap 4)
+## 4. Continuous Integration (CI)
 
 GitHub Actions workflow at `.github/workflows/backend-ci.yml`:
 - Runs on every push and PR touching `seniorconnect-backend/**`.
 - Provisions real PostgreSQL 16 and Redis 7 service containers.
-- Executes `mvn -B clean verify -Dspring.profiles.active=test`.
+- Executes `mvn -B clean test`.
 - Archives Surefire test execution reports.
+
+---
+
+## 5. Known Limitations & Operational Trade-offs
+
+### Rate Limiting Fallback During Redis Outages
+- **Global vs. Per-Instance Limits**: Under normal operations, rate limiting is coordinated centrally across all backend instances using Redis sliding windows (`ZSET`).
+- **Degradation Trade-off**: If Redis becomes unavailable, `RateLimiterService` emits an `ERROR`-level alert and degrades gracefully to an in-memory sliding window on each JVM instance. In multi-instance deployments, the effective system-wide capacity during a Redis outage is `N * limit` across `N` instances. This trade-off ensures the application remains available rather than failing open or closed completely.
+- **Memory Management**: In-memory sliding windows are periodically pruned (`@Scheduled cleanupExpiredWindows`) to purge inactive/empty keys and prevent memory growth under high user cardinality.
+
+### Least-Privileged Database Role (`seniorconnect_app`)
+- The running application connects using the dedicated `seniorconnect_app` role (`NOSUPERUSER NOBYPASSRLS`).
+- Schema migrations run under `postgres` (or a dedicated migration runner role).
+- `FORCE ROW LEVEL SECURITY` is enabled on core tables to prevent any privilege bypass.
+

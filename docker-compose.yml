@@ -46,8 +46,10 @@ services:
         condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/seniorconnect
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      SPRING_DATASOURCE_USERNAME: seniorconnect_app
+      SPRING_DATASOURCE_PASSWORD: seniorconnect_app_secret
+      SPRING_FLYWAY_USER: postgres
+      SPRING_FLYWAY_PASSWORD: postgrespassword
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
     ports:

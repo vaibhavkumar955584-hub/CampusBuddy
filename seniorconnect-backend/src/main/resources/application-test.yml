@@ -28,6 +28,8 @@ seniorconnect:
       expiration-seconds: 300
       max-attempts: 5
       lockout-seconds: 900
+    cors:
+      allowed-origins: http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000,http://127.0.0.1:8080
   ratelimit:
     auth-requests-per-hour: 5
     queries-per-day: 5

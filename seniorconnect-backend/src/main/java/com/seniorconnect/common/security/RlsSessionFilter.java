@@ -20,6 +20,9 @@ import java.io.IOException;
 public class RlsSessionFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RlsSessionFilter.class);
+    private static final java.util.regex.Pattern STRICT_UUID_PATTERN = java.util.regex.Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+    private static final java.util.regex.Pattern STRICT_ROLE_PATTERN = java.util.regex.Pattern.compile("^(JUNIOR|SENIOR|ADMIN)$");
+
     private final JdbcTemplate jdbcTemplate;
 
     public RlsSessionFilter(JdbcTemplate jdbcTemplate) {
@@ -35,28 +38,56 @@ public class RlsSessionFilter extends OncePerRequestFilter {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
-            try {
-                String userId = principal.getId().toString();
-                String role = principal.getRole().name();
+            String rawUserId = principal.getId() != null ? principal.getId().toString() : null;
+            String rawRole = principal.getRole() != null ? principal.getRole().name() : null;
 
-                // Set session variables for PostgreSQL RLS policies
-                jdbcTemplate.execute("SET app.current_user_id = '" + userId + "'");
-                jdbcTemplate.execute("SET app.current_user_role = '" + role + "'");
-            } catch (Exception e) {
-                // Ignore gracefully if datasource does not support SET (e.g. H2 in lightweight test modes)
-                log.trace("RLS session variable initialization skipped: {}", e.getMessage());
-            }
+            setSessionVariablesSafe(rawUserId, rawRole);
         }
 
         try {
             filterChain.doFilter(request, response);
         } finally {
             // Clean up session context after request
-            try {
-                jdbcTemplate.execute("RESET app.current_user_id");
-                jdbcTemplate.execute("RESET app.current_user_role");
-            } catch (Exception ignored) {
-            }
+            resetSessionVariablesSafe();
+        }
+    }
+
+    public void setSessionVariablesSafe(String userId, String role) {
+        if (userId == null || !STRICT_UUID_PATTERN.matcher(userId).matches()) {
+            log.warn("Rejected invalid or potentially malicious user ID in RLS session filter: {}", userId);
+            return;
+        }
+        if (role == null || !STRICT_ROLE_PATTERN.matcher(role).matches()) {
+            log.warn("Rejected invalid or potentially malicious role in RLS session filter: {}", role);
+            return;
+        }
+
+        try {
+            // Use prepared statement with parameter binding via PostgreSQL set_config() function
+            jdbcTemplate.execute("SELECT set_config('app.current_user_id', ?, false)",
+                    (java.sql.PreparedStatement ps) -> {
+                        ps.setString(1, userId);
+                        ps.execute();
+                        return null;
+                    });
+
+            jdbcTemplate.execute("SELECT set_config('app.current_user_role', ?, false)",
+                    (java.sql.PreparedStatement ps) -> {
+                        ps.setString(1, role);
+                        ps.execute();
+                        return null;
+                    });
+        } catch (Exception e) {
+            // Gracefully handle in-memory databases (e.g. H2 in lightweight test modes)
+            log.trace("RLS session variable initialization skipped: {}", e.getMessage());
+        }
+    }
+
+    public void resetSessionVariablesSafe() {
+        try {
+            jdbcTemplate.execute("SELECT set_config('app.current_user_id', '', false)");
+            jdbcTemplate.execute("SELECT set_config('app.current_user_role', '', false)");
+        } catch (Exception ignored) {
         }
     }
 }
