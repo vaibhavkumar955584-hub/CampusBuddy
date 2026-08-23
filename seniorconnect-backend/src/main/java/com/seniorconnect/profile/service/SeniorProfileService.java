@@ -104,6 +104,31 @@ public class SeniorProfileService {
         seniorProfileRepository.save(profile);
     }
 
+    @Transactional
+    public com.seniorconnect.auth.dto.UserDto toggleMentorMode(UserPrincipal principal, boolean active, String clientIp) {
+        User user = userRepository.findById(principal.getId())
+                .orElseThrow(() -> AppException.notFound("User not found", "USER_NOT_FOUND"));
+
+        if (!user.isMentorEligible() && user.getRole() != Role.SENIOR && user.getRole() != Role.ADMIN) {
+            throw AppException.forbidden("You must be eligible for mentoring (Year 3+ or Alumni) to enable mentor mode", "NOT_MENTOR_ELIGIBLE");
+        }
+
+        user.setMentorModeActive(active);
+        if (active) {
+            getOrCreateProfile(user);
+        }
+        User saved = userRepository.save(user);
+
+        auditService.logEvent(
+                AuditEventType.PROFILE_UPDATED,
+                user.getId(),
+                clientIp,
+                "Mentor mode toggled to " + active
+        );
+
+        return com.seniorconnect.auth.dto.UserDto.fromUser(saved);
+    }
+
     @Transactional(readOnly = true)
     public SeniorProfileDto getProfile(UUID userId) {
         SeniorProfile profile = seniorProfileRepository.findByUserId(userId)

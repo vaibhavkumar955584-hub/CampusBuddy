@@ -12,6 +12,10 @@ public record UserDto(
         Role role,
         String branch,
         Integer semester,
+        Integer currentYearOfStudy,
+        boolean mentorEligible,
+        boolean mentorModeActive,
+        Integer admissionYear,
         boolean isSuspended
 ) {
     public static UserDto fromUser(User user) {
@@ -22,6 +26,10 @@ public record UserDto(
                 user.getRole(),
                 user.getBranch(),
                 user.getSemester(),
+                user.getCurrentYearOfStudy(),
+                user.isMentorEligible(),
+                user.isMentorModeActive(),
+                user.getAdmissionYear(),
                 user.isSuspended()
         );
     }

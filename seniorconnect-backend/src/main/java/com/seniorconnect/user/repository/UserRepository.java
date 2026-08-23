@@ -15,12 +15,13 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
+    List<User> findByRole(Role role);
     List<User> findByRoleAndBranch(Role role, String branch);
 
     @Query(value = """
         SELECT DISTINCT u.* FROM users u 
         JOIN senior_profiles sp ON sp.user_id = u.id 
-        WHERE u.role = 'SENIOR' 
+        WHERE (u.role = 'SENIOR' OR (u.role = 'JUNIOR' AND u.mentor_mode_active = true)) 
           AND u.is_suspended = false 
           AND (
               sp.tags && CAST(:queryTags AS text[]) 
@@ -31,7 +32,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("""
         SELECT u FROM User u 
-        WHERE u.role = com.seniorconnect.user.model.Role.SENIOR 
+        WHERE (u.role = com.seniorconnect.user.model.Role.SENIOR OR (u.role = com.seniorconnect.user.model.Role.JUNIOR AND u.mentorModeActive = true)) 
           AND u.isSuspended = false 
           AND (:branch IS NULL OR u.branch = :branch)
     """)

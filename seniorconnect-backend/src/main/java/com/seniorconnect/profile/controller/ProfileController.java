@@ -27,6 +27,17 @@ public class ProfileController {
         return ResponseEntity.ok(seniorProfileService.getProfile(userId));
     }
 
+    @PostMapping("/mentor-mode")
+    public ResponseEntity<com.seniorconnect.auth.dto.UserDto> toggleMentorMode(
+            @RequestBody(required = false) Map<String, Boolean> body,
+            @AuthenticationPrincipal UserPrincipal principal,
+            HttpServletRequest httpRequest
+    ) {
+        boolean active = body != null && (body.getOrDefault("active", body.getOrDefault("mentorModeActive", true)));
+        String clientIp = extractClientIp(httpRequest);
+        return ResponseEntity.ok(seniorProfileService.toggleMentorMode(principal, active, clientIp));
+    }
+
     @PutMapping("/placement-tag")
     @PreAuthorize("hasAnyRole('SENIOR', 'ADMIN')")
     public ResponseEntity<SeniorProfileDto> updatePlacementTag(

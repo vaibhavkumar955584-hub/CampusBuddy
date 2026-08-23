@@ -16,6 +16,10 @@ CREATE TABLE users (
     role VARCHAR(32) NOT NULL,
     branch VARCHAR(100),
     semester INT,
+    current_year_of_study INT,
+    mentor_eligible BOOLEAN NOT NULL DEFAULT FALSE,
+    mentor_mode_active BOOLEAN NOT NULL DEFAULT FALSE,
+    admission_year INT,
     is_suspended BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE

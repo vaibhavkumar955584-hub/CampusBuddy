@@ -51,6 +51,10 @@ public class NotificationService {
                 title = "SeniorConnect Connection";
                 body = "A junior student accepted your connection request.";
             }
+            case "MENTOR_ELIGIBLE" -> {
+                title = "SeniorConnect Mentorship";
+                body = "You're now eligible to mentor juniors on SeniorConnect — want to turn it on?";
+            }
             default -> {
                 title = "SeniorConnect Notification";
                 body = "You have a new update in your mentorship feed.";

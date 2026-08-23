@@ -16,5 +16,6 @@ public enum AuditEventType {
     REPORT_SUBMITTED,
     USER_SOFT_SUSPENDED,
     TAG_VERIFIED,
+    PROFILE_UPDATED,
     ADMIN_ACTION
 }

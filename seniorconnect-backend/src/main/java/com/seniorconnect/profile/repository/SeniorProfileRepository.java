@@ -20,7 +20,7 @@ public interface SeniorProfileRepository extends JpaRepository<SeniorProfile, UU
     @Query("""
         SELECT sp FROM SeniorProfile sp 
         JOIN FETCH sp.user u 
-        WHERE u.role = com.seniorconnect.user.model.Role.SENIOR 
+        WHERE (u.role = com.seniorconnect.user.model.Role.SENIOR OR (u.role = com.seniorconnect.user.model.Role.JUNIOR AND u.mentorModeActive = true)) 
           AND u.isSuspended = false 
           AND (:branch IS NULL OR u.branch = :branch)
     """)
@@ -29,7 +29,7 @@ public interface SeniorProfileRepository extends JpaRepository<SeniorProfile, UU
     @Query(value = """
         SELECT DISTINCT sp.* FROM senior_profiles sp 
         JOIN users u ON u.id = sp.user_id 
-        WHERE u.role = 'SENIOR' 
+        WHERE (u.role = 'SENIOR' OR (u.role = 'JUNIOR' AND u.mentor_mode_active = true)) 
           AND u.is_suspended = false 
           AND sp.tags && string_to_array(:queryTagsCsv, ',')
     """, nativeQuery = true)

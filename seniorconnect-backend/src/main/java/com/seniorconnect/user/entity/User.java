@@ -29,6 +29,18 @@ public class User {
     @Column(name = "semester")
     private Integer semester;
 
+    @Column(name = "current_year_of_study")
+    private Integer currentYearOfStudy;
+
+    @Column(name = "mentor_eligible", nullable = false)
+    private boolean mentorEligible = false;
+
+    @Column(name = "mentor_mode_active", nullable = false)
+    private boolean mentorModeActive = false;
+
+    @Column(name = "admission_year")
+    private Integer admissionYear;
+
     @Column(name = "is_suspended", nullable = false)
     private boolean isSuspended = false;
 
@@ -42,12 +54,20 @@ public class User {
     }
 
     public User(UUID id, String email, String fullName, Role role, String branch, Integer semester, boolean isSuspended, Instant createdAt, Instant updatedAt) {
+        this(id, email, fullName, role, branch, semester, null, false, false, null, isSuspended, createdAt, updatedAt);
+    }
+
+    public User(UUID id, String email, String fullName, Role role, String branch, Integer semester, Integer currentYearOfStudy, boolean mentorEligible, boolean mentorModeActive, Integer admissionYear, boolean isSuspended, Instant createdAt, Instant updatedAt) {
         this.id = id != null ? id : UUID.randomUUID();
         this.email = email;
         this.fullName = fullName;
         this.role = role;
         this.branch = branch;
         this.semester = semester;
+        this.currentYearOfStudy = currentYearOfStudy;
+        this.mentorEligible = mentorEligible;
+        this.mentorModeActive = mentorModeActive;
+        this.admissionYear = admissionYear;
         this.isSuspended = isSuspended;
         this.createdAt = createdAt != null ? createdAt : Instant.now();
         this.updatedAt = updatedAt;
@@ -114,6 +134,38 @@ public class User {
 
     public void setSemester(Integer semester) {
         this.semester = semester;
+    }
+
+    public Integer getCurrentYearOfStudy() {
+        return currentYearOfStudy;
+    }
+
+    public void setCurrentYearOfStudy(Integer currentYearOfStudy) {
+        this.currentYearOfStudy = currentYearOfStudy;
+    }
+
+    public boolean isMentorEligible() {
+        return mentorEligible;
+    }
+
+    public void setMentorEligible(boolean mentorEligible) {
+        this.mentorEligible = mentorEligible;
+    }
+
+    public boolean isMentorModeActive() {
+        return mentorModeActive;
+    }
+
+    public void setMentorModeActive(boolean mentorModeActive) {
+        this.mentorModeActive = mentorModeActive;
+    }
+
+    public Integer getAdmissionYear() {
+        return admissionYear;
+    }
+
+    public void setAdmissionYear(Integer admissionYear) {
+        this.admissionYear = admissionYear;
     }
 
     public boolean isSuspended() {

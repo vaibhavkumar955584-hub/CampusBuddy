@@ -37,6 +37,8 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
     private final AuditService auditService;
+    private final EmailParserService emailParserService;
+    private final com.seniorconnect.user.service.YearOfStudyService yearOfStudyService;
     private final long refreshTokenExpirationSeconds;
     private final long accessTokenExpirationSeconds;
 
@@ -46,6 +48,8 @@ public class AuthService {
             RefreshTokenRepository refreshTokenRepository,
             JwtService jwtService,
             AuditService auditService,
+            EmailParserService emailParserService,
+            com.seniorconnect.user.service.YearOfStudyService yearOfStudyService,
             @Value("${seniorconnect.security.jwt.refresh-token-expiration-seconds:2592000}") long refreshTokenExpirationSeconds,
             @Value("${seniorconnect.security.jwt.access-token-expiration-seconds:900}") long accessTokenExpirationSeconds
     ) {
@@ -54,6 +58,8 @@ public class AuthService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.jwtService = jwtService;
         this.auditService = auditService;
+        this.emailParserService = emailParserService;
+        this.yearOfStudyService = yearOfStudyService;
         this.refreshTokenExpirationSeconds = refreshTokenExpirationSeconds;
         this.accessTokenExpirationSeconds = accessTokenExpirationSeconds;
     }
@@ -73,6 +79,18 @@ public class AuthService {
         User user = userRepository.findByEmail(normEmail).orElseGet(() -> {
             Role role = requestedRole != null ? requestedRole : Role.JUNIOR;
             String name = fullName != null && !fullName.isBlank() ? fullName : normEmail.split("@")[0];
+
+            Integer admissionYear = null;
+            Integer currentYearOfStudy = null;
+            try {
+                ParsedEmailDto parsed = emailParserService.parseCollegeEmail(normEmail);
+                if (parsed != null && parsed.isMatched()) {
+                    admissionYear = parsed.admissionYear();
+                    currentYearOfStudy = parsed.yearOfStudy();
+                }
+            } catch (Exception ignored) {
+            }
+
             User newUser = new User(
                     UUID.randomUUID(),
                     normEmail,
@@ -80,6 +98,10 @@ public class AuthService {
                     role,
                     branch,
                     semester,
+                    currentYearOfStudy,
+                    false,
+                    false,
+                    admissionYear,
                     false,
                     Instant.now(),
                     null
@@ -90,6 +112,9 @@ public class AuthService {
         if (user.isSuspended()) {
             throw AppException.forbidden("Your account is currently suspended pending review", "ACCOUNT_SUSPENDED");
         }
+
+        // Run self-healing year-of-study and mentor-eligibility recalculation on every successful login
+        yearOfStudyService.recalculate(user);
 
         String accessToken = jwtService.generateAccessToken(user);
         String rawRefreshToken = generateSecureToken();

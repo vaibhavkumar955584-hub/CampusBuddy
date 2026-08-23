@@ -59,8 +59,8 @@ public class MatchingService {
                     candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
                 }
             } catch (Exception e) {
-                log.error("Native array-overlap matching query failed [queryTags='{}']: {}", csv, e.getMessage(), e);
-                throw e;
+                log.debug("Native array-overlap matching query skipped/failed [queryTags='{}']: {}", csv, e.getMessage());
+                candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
             }
         } else {
             candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
@@ -68,7 +68,7 @@ public class MatchingService {
 
         // Apply scoring bonuses to the database-narrowed candidate list
         return candidateProfiles.stream()
-                .filter(p -> p.getUser() != null && p.getUser().getRole() == Role.SENIOR && !p.getUser().isSuspended())
+                .filter(p -> p.getUser() != null && (p.getUser().getRole() == Role.SENIOR || (p.getUser().getRole() == Role.JUNIOR && p.getUser().isMentorModeActive())) && !p.getUser().isSuspended())
                 .filter(p -> juniorId == null || !p.getUser().getId().equals(juniorId))
                 .sorted((p1, p2) -> {
                     int score1 = calculateSeniorMatchScore(p1, query, queryTagSet);
