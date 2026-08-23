@@ -4,6 +4,8 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/models/query_model.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/anonymity_badge.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../moderation/widgets/report_modal.dart';
 
 class QueryDetailScreen extends StatefulWidget {
@@ -95,7 +97,10 @@ class _QueryDetailScreenState extends State<QueryDetailScreen> {
         title: const Text('Question Details', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppTheme.onSurface)),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const Padding(
+              padding: EdgeInsets.all(16),
+              child: SkeletonCard(),
+            )
           : _query == null
               ? const Center(child: Text('Failed to load question details'))
               : Column(
@@ -132,20 +137,9 @@ class _QueryDetailScreenState extends State<QueryDetailScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: _query!.isAnonymousDisplay ? const Color(0xFFF3E8FF) : const Color(0xFFDFF1F5),
-                                          borderRadius: BorderRadius.circular(9999),
-                                        ),
-                                        child: Text(
-                                          _query!.juniorName,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: _query!.isAnonymousDisplay ? Colors.purple : AppTheme.primary,
-                                          ),
-                                        ),
+                                      AnonymityBadge(
+                                        isAnonymous: _query!.isAnonymousDisplay,
+                                        studentName: _query!.juniorName,
                                       ),
                                       const Spacer(),
                                       if (user != null && user.isSenior && _query!.isAnonymousDisplay && !_query!.identityRevealedToViewer)

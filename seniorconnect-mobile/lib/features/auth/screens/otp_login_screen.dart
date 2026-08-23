@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/services/firebase_auth_service.dart';
-import '../../../core/services/firestore_service.dart';
 import '../../../core/theme/app_theme.dart';
 import 'profile_setup_screen.dart';
 
@@ -16,7 +15,6 @@ class OtpLoginScreen extends StatefulWidget {
 
 class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProviderStateMixin {
   final FirebaseAuthService _authService = FirebaseAuthService();
-  final FirestoreService _firestoreService = FirestoreService();
 
   late TabController _tabController;
   final TextEditingController _emailController = TextEditingController();
@@ -206,22 +204,6 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProvid
   }
 
   Future<void> _onAuthSuccess(User user) async {
-    final String displayName = (user.displayName != null && user.displayName!.isNotEmpty)
-        ? user.displayName!
-        : (_nameController.text.trim().isNotEmpty ? _nameController.text.trim() : 'Campus User');
-
-    // Save/update profile in Firestore with timeout protection
-    try {
-      await _firestoreService.createUserProfile(
-        uid: user.uid,
-        email: user.email ?? user.phoneNumber ?? '',
-        fullName: displayName,
-        role: widget.selectedRole,
-      ).timeout(const Duration(seconds: 4));
-    } catch (e) {
-      debugPrint('Firestore profile sync error: $e');
-    }
-
     if (mounted) {
       Navigator.pushReplacement(
         context,

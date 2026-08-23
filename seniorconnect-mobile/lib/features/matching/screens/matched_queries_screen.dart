@@ -4,6 +4,8 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/models/query_model.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/anonymity_badge.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../queries/screens/query_detail_screen.dart';
 
 class MatchedQueriesScreen extends StatefulWidget {
@@ -35,7 +37,7 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
       final res = await _apiClient.get(ApiConstants.matchedQueries);
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        final List items = data['content'] ?? [];
+        final List items = data['content'] ?? (data is List ? data : []);
         setState(() {
           _matchedQueries = items.map((q) => QueryModel.fromJson(q)).toList();
         });
@@ -53,30 +55,39 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.background,
+        backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.background,
         elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Matched Queries',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppTheme.onSurface),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: isDark ? AppTheme.darkOnSurface : AppTheme.onSurface,
+              ),
             ),
             Text(
               'Questions matching your skills and branch',
-              style: TextStyle(fontSize: 12, color: AppTheme.outline),
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppTheme.darkOutline : AppTheme.outline,
+              ),
             ),
           ],
         ),
       ),
       body: RefreshIndicator(
         onRefresh: _fetchMatchedQueries,
-        color: AppTheme.primary,
+        color: isDark ? AppTheme.darkPrimary : AppTheme.primary,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+            ? const SkeletonFeedList(count: 4)
             : _errorMessage != null
                 ? Center(
                     child: Padding(
@@ -86,7 +97,10 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
                         children: [
                           const Icon(Icons.error_outline, size: 48, color: AppTheme.error),
                           const SizedBox(height: 12),
-                          Text(_errorMessage!, style: const TextStyle(color: AppTheme.onSurfaceVariant)),
+                          Text(
+                            _errorMessage!,
+                            style: TextStyle(color: isDark ? AppTheme.darkOnSurfaceVariant : AppTheme.onSurfaceVariant),
+                          ),
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _fetchMatchedQueries,
@@ -106,21 +120,32 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryContainer.withValues(alpha: 0.1),
+                                  color: (isDark ? AppTheme.darkPrimary : AppTheme.primary).withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.auto_awesome, size: 40, color: AppTheme.primary),
+                                child: Icon(
+                                  Icons.auto_awesome,
+                                  size: 40,
+                                  color: isDark ? AppTheme.darkPrimary : AppTheme.primary,
+                                ),
                               ),
                               const SizedBox(height: 16),
-                              const Text(
+                              Text(
                                 'No Matched Queries Right Now',
-                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.onSurface),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: isDark ? AppTheme.darkOnSurface : AppTheme.onSurface,
+                                ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
+                              Text(
                                 'When junior students post questions matching your tags or branch, they will appear here.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13),
+                                style: TextStyle(
+                                  color: isDark ? AppTheme.darkOnSurfaceVariant : AppTheme.onSurfaceVariant,
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),
@@ -131,21 +156,28 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
                         itemCount: _matchedQueries.length,
                         itemBuilder: (context, index) {
                           final query = _matchedQueries[index];
-                          return _buildMatchCard(query);
+                          return _buildMatchCard(query, isDark);
                         },
                       ),
       ),
     );
   }
 
-  Widget _buildMatchCard(QueryModel query) {
+  Widget _buildMatchCard(QueryModel query, bool isDark) {
+    final cardBg = isDark ? AppTheme.darkSurfaceContainer : AppTheme.surfaceContainerLowest;
+    final cardBorder = isDark ? AppTheme.darkCardBorder : AppTheme.cardBorder;
+    final primaryCol = isDark ? AppTheme.darkPrimary : AppTheme.primary;
+    final onSurfaceCol = isDark ? AppTheme.darkOnSurface : AppTheme.onSurface;
+    final onSurfaceVar = isDark ? AppTheme.darkOnSurfaceVariant : AppTheme.onSurfaceVariant;
+    final outlineCol = isDark ? AppTheme.darkOutline : AppTheme.outline;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest,
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.cardBorder),
-        boxShadow: const [AppTheme.ambientShadow],
+        border: Border.all(color: cardBorder),
+        boxShadow: [isDark ? AppTheme.darkAmbientShadow : AppTheme.ambientShadow],
       ),
       child: InkWell(
         onTap: () {
@@ -160,22 +192,29 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Top Row: Anonymity Badge + Branch Pill + Match Badge
               Row(
                 children: [
+                  AnonymityBadge(
+                    isAnonymous: query.isAnonymousDisplay,
+                    studentName: query.juniorName,
+                    isCompact: true,
+                  ),
+                  const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDFF1F5),
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFDFF1F5),
                       borderRadius: BorderRadius.circular(9999),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.tune_rounded, size: 12, color: AppTheme.primary),
-                        const SizedBox(width: 4),
+                        Icon(Icons.tune_rounded, size: 11, color: primaryCol),
+                        const SizedBox(width: 3),
                         Text(
                           query.juniorBranch ?? 'General',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primary),
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: primaryCol),
                         ),
                       ],
                     ),
@@ -184,7 +223,7 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppTheme.success.withValues(alpha: 0.1),
+                      color: AppTheme.success.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Text('MATCHED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.success)),
@@ -194,14 +233,14 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
               const SizedBox(height: 12),
               Text(
                 query.title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.onSurface),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: onSurfaceCol),
               ),
               const SizedBox(height: 6),
               Text(
                 query.content,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 13, height: 1.4),
+                style: TextStyle(color: onSurfaceVar, fontSize: 13, height: 1.4),
               ),
               if (query.tags != null && query.tags!.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -212,10 +251,10 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainerLow,
+                        color: isDark ? const Color(0xFF21262D) : AppTheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text('#$t', style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                      child: Text('#$t', style: TextStyle(fontSize: 11, color: primaryCol, fontWeight: FontWeight.w600)),
                     );
                   }).toList(),
                 ),
@@ -223,11 +262,11 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.chat_bubble_outline_rounded, size: 14, color: AppTheme.outline),
+                  Icon(Icons.chat_bubble_outline_rounded, size: 14, color: outlineCol),
                   const SizedBox(width: 4),
-                  Text('${query.responsesCount} responses', style: TextStyle(fontSize: 12, color: AppTheme.outline)),
+                  Text('${query.responsesCount} responses', style: TextStyle(fontSize: 12, color: outlineCol)),
                   const Spacer(),
-                  const Text('Answer Query →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+                  Text('Answer Query →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: primaryCol)),
                 ],
               ),
             ],

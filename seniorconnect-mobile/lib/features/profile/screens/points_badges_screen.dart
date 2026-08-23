@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 
 class BadgeItem {
   final String title;
@@ -132,7 +133,7 @@ class _PointsBadgesScreenState extends State<PointsBadgesScreen> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const SkeletonFeedList(count: 3)
           : RefreshIndicator(
               onRefresh: _fetchProfile,
               color: AppTheme.primary,

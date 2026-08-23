@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Brand Colors
+  // --- LIGHT BRAND COLORS ---
   static const Color primary = Color(0xFF003B43); // Deep Teal
   static const Color primaryContainer = Color(0xFF1A535C);
   static const Color onPrimary = Color(0xFFFFFFFF);
@@ -15,7 +15,7 @@ class AppTheme {
   static const Color onSecondary = Color(0xFFFFFFFF);
   static const Color onSecondaryContainer = Color(0xFF6D0010);
 
-  // Surfaces & Backgrounds
+  // Surfaces & Backgrounds (Light)
   static const Color background = Color(0xFFF4FAFD);
   static const Color surface = Color(0xFFF4FAFD);
   static const Color surfaceContainerLowest = Color(0xFFFFFFFF);
@@ -24,7 +24,7 @@ class AppTheme {
   static const Color surfaceContainerHigh = Color(0xFFE2E9EC);
   static const Color surfaceContainerHighest = Color(0xFFDDE4E6);
 
-  // Content & Typography Colors
+  // Content & Typography Colors (Light)
   static const Color onSurface = Color(0xFF161D1F);
   static const Color onSurfaceVariant = Color(0xFF40484A);
   static const Color outline = Color(0xFF70797A);
@@ -36,9 +36,44 @@ class AppTheme {
   static const Color warning = Color(0xFFF59E0B); // Amber
   static const Color error = Color(0xFFBA1A1A);
 
-  // Ambient Shadow: 0px 4px 20px rgba(26, 83, 92, 0.08)
+  // --- DARK BRAND & SURFACE COLORS ---
+  static const Color darkPrimary = Color(0xFF2DD4BF); // Vibrant Teal 400
+  static const Color darkPrimaryContainer = Color(0xFF0F3E44);
+  static const Color darkOnPrimary = Color(0xFF00373E);
+  static const Color darkOnPrimaryContainer = Color(0xFF99F6E4);
+
+  static const Color darkSecondary = Color(0xFFFB7185); // Coral 400
+  static const Color darkSecondaryContainer = Color(0xFF4C0519);
+  static const Color darkOnSecondary = Color(0xFF4C0519);
+  static const Color darkOnSecondaryContainer = Color(0xFFFFD1D8);
+
+  static const Color darkBackground = Color(0xFF0D1117);
+  static const Color darkSurface = Color(0xFF161B22);
+  static const Color darkSurfaceContainerLowest = Color(0xFF090D12);
+  static const Color darkSurfaceContainerLow = Color(0xFF161B22);
+  static const Color darkSurfaceContainer = Color(0xFF21262D);
+  static const Color darkSurfaceContainerHigh = Color(0xFF30363D);
+  static const Color darkSurfaceContainerHighest = Color(0xFF3B434D);
+
+  static const Color darkOnSurface = Color(0xFFF0F6FC);
+  static const Color darkOnSurfaceVariant = Color(0xFFC9D1D9);
+  static const Color darkOutline = Color(0xFF8B949E);
+  static const Color darkOutlineVariant = Color(0xFF30363D);
+  static const Color darkCardBorder = Color(0xFF30363D);
+
+  static const Color darkSuccess = Color(0xFF34D399);
+  static const Color darkWarning = Color(0xFFFBBF24);
+  static const Color darkError = Color(0xFFF87171);
+
+  // Ambient Shadows
   static const BoxShadow ambientShadow = BoxShadow(
     color: Color(0x141A535C),
+    blurRadius: 20,
+    offset: Offset(0, 4),
+  );
+
+  static const BoxShadow darkAmbientShadow = BoxShadow(
+    color: Color(0x33000000),
     blurRadius: 20,
     offset: Offset(0, 4),
   );
@@ -151,6 +186,122 @@ class AppTheme {
         backgroundColor: surfaceContainerLowest,
         selectedItemColor: primary,
         unselectedItemColor: outline,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    final baseTextTheme = ThemeData.dark().textTheme;
+    final manropeTheme = GoogleFonts.manropeTextTheme(baseTextTheme);
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: darkBackground,
+      colorScheme: const ColorScheme.dark(
+        primary: darkPrimary,
+        onPrimary: darkOnPrimary,
+        primaryContainer: darkPrimaryContainer,
+        onPrimaryContainer: darkOnPrimaryContainer,
+        secondary: darkSecondary,
+        onSecondary: darkOnSecondary,
+        secondaryContainer: darkSecondaryContainer,
+        onSecondaryContainer: darkOnSecondaryContainer,
+        surface: darkSurface,
+        onSurface: darkOnSurface,
+        onSurfaceVariant: darkOnSurfaceVariant,
+        outline: darkOutline,
+        outlineVariant: darkOutlineVariant,
+        error: darkError,
+      ),
+      textTheme: manropeTheme.copyWith(
+        headlineLarge: manropeTheme.headlineLarge?.copyWith(
+          fontSize: 32,
+          fontWeight: FontWeight.w700,
+          color: darkOnSurface,
+          letterSpacing: -0.02 * 32,
+        ),
+        headlineMedium: manropeTheme.headlineMedium?.copyWith(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: darkOnSurface,
+        ),
+        bodyLarge: manropeTheme.bodyLarge?.copyWith(
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          color: darkOnSurface,
+          height: 1.5,
+        ),
+        bodyMedium: manropeTheme.bodyMedium?.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: darkOnSurfaceVariant,
+          height: 1.4,
+        ),
+        labelLarge: manropeTheme.labelLarge?.copyWith(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.05 * 12,
+        ),
+        bodySmall: manropeTheme.bodySmall?.copyWith(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          color: darkOnSurfaceVariant,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: darkSurfaceContainer,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: darkCardBorder, width: 1),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkSurfaceContainer,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        hintStyle: const TextStyle(color: darkOutline, fontSize: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: darkOutlineVariant, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: darkOutlineVariant, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: darkPrimary, width: 2),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: darkPrimary,
+          foregroundColor: darkOnPrimary,
+          elevation: 0,
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: darkPrimary,
+          side: const BorderSide(color: darkPrimary, width: 1.5),
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: darkSurface,
+        selectedItemColor: darkPrimary,
+        unselectedItemColor: darkOutline,
         showSelectedLabels: true,
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,

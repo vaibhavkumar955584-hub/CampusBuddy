@@ -2,52 +2,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
+    // =========================================================================
+    // CRITICAL SECURITY HARDENING:
+    // Direct client read/write access to Firestore is permanently disabled.
+    // All queries, responses, reveals, profiles, and moderation reports MUST
+    // route through the Spring Boot REST API which enforces:
+    //   - PostgreSQL Row Level Security (RLS)
+    //   - Cryptographic RS256 JWT validation
+    //   - Server-side IDOR checks
+    //   - Strict anonymity serialization
+    //   - Transactional consent-gated identity reveals
+    //   - Append-only immutable audit logging
+    // =========================================================================
 
-    // Users Collection
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isOwner(userId);
-      allow delete: if false; // Profiles shouldn't be deleted directly by clients
-    }
-
-    // Queries / Questions Collection
-    match /queries/{queryId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.authorUid == request.auth.uid;
-      allow update: if isAuthenticated(); // Allow responses counter increment or author edit
-      allow delete: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
-    }
-
-    // Responses Collection
-    match /responses/{responseId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.authorUid == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
-    }
-
-    // Identity Reveal Requests Collection
-    match /reveals/{revealId} {
-      allow read: if isAuthenticated() && (
-        resource.data.juniorUid == request.auth.uid || 
-        resource.data.seniorUid == request.auth.uid
-      );
-      allow create: if isAuthenticated() && request.resource.data.juniorUid == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.seniorUid == request.auth.uid;
-      allow delete: if false;
-    }
-
-    // Moderation & Reports Collection
-    match /reports/{reportId} {
-      allow create: if isAuthenticated() && request.resource.data.reporterUid == request.auth.uid;
-      allow read, update, delete: if false; // Only accessible via Admin SDK / Firebase Console
+    // Deny all client access across all collections
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

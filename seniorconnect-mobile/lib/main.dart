@@ -20,12 +20,13 @@ class SeniorConnectApp extends StatelessWidget {
       title: 'SeniorConnect',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
-              backgroundColor: AppTheme.background,
               body: Center(
                 child: CircularProgressIndicator(color: AppTheme.primary),
               ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../core/services/firestore_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../queries/screens/query_feed_screen.dart';
 
@@ -19,8 +18,6 @@ class ProfileSetupScreen extends StatefulWidget {
 }
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
-
   late TextEditingController _nameController;
   late TextEditingController _branchController;
   late TextEditingController _customTagController;
@@ -98,37 +95,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Future<void> _saveAndContinue() async {
     setState(() => _isLoading = true);
-
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await _firestoreService.createUserProfile(
-          uid: user.uid,
-          email: user.email ?? widget.email,
-          fullName: _nameController.text.trim(),
-          role: 'STUDENT',
-          branch: _branchController.text.trim(),
-          skills: _tags,
-        );
-      }
-
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const QueryFeedScreen()),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const QueryFeedScreen()),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const QueryFeedScreen()),
+      );
     }
   }
 

@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/models/query_model.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/firebase_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/anonymity_badge.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/screens/role_selection_screen.dart';
 import '../../matching/screens/matched_queries_screen.dart';
 import '../../notifications/screens/notifications_screen.dart';
@@ -36,38 +39,31 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
   Future<void> _fetchQueries() async {
     setState(() => _isLoading = true);
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('queries')
-          .orderBy('createdAt', descending: true)
-          .get();
+      final res = await _apiClient.get(ApiConstants.queries);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final List items = data['content'] ?? (data is List ? data : []);
+        if (items.isNotEmpty) {
+          setState(() {
+            _queries = items.map((q) => QueryModel.fromJson(q)).toList();
+          });
+          return;
+        }
+      }
+      _setFallbackQueries();
+    } catch (_) {
+      _setFallbackQueries();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
-      if (snapshot.docs.isNotEmpty) {
-        setState(() {
-          _queries = snapshot.docs.map((doc) {
-            final data = doc.data();
-            return QueryModel(
-              id: doc.id,
-              title: data['title'] ?? '',
-              content: data['content'] ?? '',
-              tags: data['category'] ?? data['tags'] ?? 'Campus',
-              isAnonymousDisplay: data['isAnonymous'] ?? true,
-              juniorId: data['authorUid'],
-              juniorName: data['authorName'] ?? 'Anonymous Junior',
-              juniorBranch: data['targetBranch'],
-              juniorSemester: null,
-              identityRevealedToViewer: false,
-              status: 'OPEN',
-              responsesCount: data['responseCount'] ?? 0,
-              responses: [],
-              createdAt: 'Recent',
-            );
-          }).toList();
-        });
-      } else {
-        // Fallback sample data
-        setState(() {
-          _queries = [
-            QueryModel(
+  void _setFallbackQueries() {
+    setState(() {
+      _queries = [
+        QueryModel(
               id: 'q1',
               title: 'Tips for cracking IT/Software internships in 3rd year?',
               content: 'Which DSA topics and frameworks are most asked in on-campus placements?',
@@ -277,7 +273,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                ? const SkeletonFeedList(count: 4)
                 : _queries.isEmpty
                     ? Center(
                         child: Column(
@@ -353,12 +349,17 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
   }
 
   Widget _buildQueryCard(QueryModel query) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppTheme.darkSurfaceContainer : AppTheme.surfaceContainerLowest;
+    final cardBorder = isDark ? AppTheme.darkCardBorder : AppTheme.cardBorder;
+    final onSurfaceCol = isDark ? AppTheme.darkOnSurface : AppTheme.onSurface;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest,
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.cardBorder, width: 1),
-        boxShadow: const [AppTheme.ambientShadow],
+        border: Border.all(color: cardBorder, width: 1),
+        boxShadow: [isDark ? AppTheme.darkAmbientShadow : AppTheme.ambientShadow],
       ),
       child: Material(
         color: Colors.transparent,
@@ -377,39 +378,18 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: query.isAnonymousDisplay
-                            ? const Color(0xFFF3E8FF)
-                            : const Color(0xFFDFF1F5),
-                        borderRadius: BorderRadius.circular(9999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            query.isAnonymousDisplay ? Icons.visibility_off_outlined : Icons.person_outline,
-                            size: 13,
-                            color: query.isAnonymousDisplay ? Colors.purple : AppTheme.primary,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            query.juniorName,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: query.isAnonymousDisplay ? Colors.purple : AppTheme.primary,
-                            ),
-                          ),
-                        ],
-                      ),
+                    AnonymityBadge(
+                      isAnonymous: query.isAnonymousDisplay,
+                      studentName: query.juniorName,
                     ),
                     const SizedBox(width: 8),
                     if (query.juniorBranch != null)
                       Text(
                         '• ${query.juniorBranch}',
-                        style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
+                        style: TextStyle(
+                          color: isDark ? AppTheme.darkOnSurfaceVariant : AppTheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
                       ),
                     const Spacer(),
                     Container(
@@ -417,7 +397,7 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                       decoration: BoxDecoration(
                         color: query.isResolved
                             ? AppTheme.success.withValues(alpha: 0.12)
-                            : AppTheme.surfaceContainerLow,
+                            : (isDark ? const Color(0xFF21262D) : AppTheme.surfaceContainerLow),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -425,7 +405,9 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: query.isResolved ? AppTheme.success : AppTheme.onSurfaceVariant,
+                          color: query.isResolved
+                              ? AppTheme.success
+                              : (isDark ? AppTheme.darkOnSurfaceVariant : AppTheme.onSurfaceVariant),
                         ),
                       ),
                     ),
@@ -434,10 +416,10 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                 const SizedBox(height: 12),
                 Text(
                   query.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.onSurface,
+                    color: onSurfaceCol,
                   ),
                 ),
                 const SizedBox(height: 6),

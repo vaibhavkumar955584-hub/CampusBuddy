@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../queries/screens/query_detail_screen.dart';
 import '../../reveal/screens/pending_reveals_screen.dart';
 
@@ -128,7 +129,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 4,
+              itemBuilder: (_, __) => const SkeletonListTile(),
+            )
           : _notifications.isEmpty
               ? Center(
                   child: Padding(

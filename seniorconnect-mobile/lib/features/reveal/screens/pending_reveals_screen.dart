@@ -4,6 +4,7 @@ import '../../../core/constants/api_constants.dart';
 import '../../../core/models/reveal_model.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 
 class PendingRevealsScreen extends StatefulWidget {
   const PendingRevealsScreen({super.key});
@@ -61,7 +62,7 @@ class _PendingRevealsScreenState extends State<PendingRevealsScreen> {
         title: const Text('Identity Reveal Requests', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppTheme.onSurface)),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const SkeletonFeedList(count: 3)
           : _reveals.isEmpty
               ? const Center(
                   child: Column(
