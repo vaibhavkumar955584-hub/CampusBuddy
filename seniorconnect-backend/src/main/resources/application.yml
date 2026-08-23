@@ -60,6 +60,9 @@ seniorconnect:
     queries-per-day: 5
     responses-per-day: 20
     reveals-per-day: 10
+  ocr:
+    tessdata-path: ${TESSDATA_PREFIX:/usr/share/tessdata}
+    timeout-seconds: 15
   email-parsing:
     required-domain: galgotiacollege.edu
     college-prefix: gce

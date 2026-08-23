@@ -25,6 +25,24 @@ public class ProofOcrService {
     @Value("${seniorconnect.ocr.timeout-seconds:15}")
     private int timeoutSeconds;
 
+    @jakarta.annotation.PostConstruct
+    public void initSanityCheck() {
+        try {
+            ITesseract tesseract = new Tesseract();
+            if (configuredTessdataPath != null && !configuredTessdataPath.isBlank()) {
+                tesseract.setDatapath(configuredTessdataPath);
+            }
+            tesseract.setLanguage("eng");
+
+            // Perform a dry-run check with a blank image to verify native library loading & tessdata access
+            BufferedImage testImg = new BufferedImage(10, 10, BufferedImage.TYPE_BYTE_GRAY);
+            tesseract.doOCR(testImg);
+            log.info("Tesseract OCR engine successfully verified with language 'eng' and datapath: '{}'", configuredTessdataPath != null ? configuredTessdataPath : "default system path");
+        } catch (Throwable t) {
+            log.error("CRITICAL CONFIG WARNING: Native Tesseract OCR or English trained data not operational at datapath='{}'. Error: {}. Verification requests will gracefully fallback to manual human review.", configuredTessdataPath, t.getMessage());
+        }
+    }
+
     public record OcrResult(String text, Double confidenceScore, boolean success) {
         public static OcrResult empty() {
             return new OcrResult(null, null, false);
