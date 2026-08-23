@@ -53,12 +53,6 @@ jobs:
 
       - name: Run Maven Tests
         working-directory: ./seniorconnect-backend
-        env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/seniorconnect
-          SPRING_DATASOURCE_USERNAME: postgres
-          SPRING_DATASOURCE_PASSWORD: postgrespassword
-          SPRING_REDIS_HOST: localhost
-          SPRING_REDIS_PORT: 6379
         run: mvn -B clean test
 
       - name: Upload Surefire Test Reports
