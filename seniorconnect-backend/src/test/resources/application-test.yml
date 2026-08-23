@@ -1,0 +1,56 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: true
+    locations: classpath:db/test-migration
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+seniorconnect:
+  security:
+    jwt:
+      access-token-expiration-seconds: 900
+      refresh-token-expiration-seconds: 2592000
+      issuer: seniorconnect-test-issuer
+    otp:
+      expiration-seconds: 300
+      max-attempts: 5
+      lockout-seconds: 900
+  ratelimit:
+    auth-requests-per-hour: 5
+    queries-per-day: 5
+    responses-per-day: 20
+    reveals-per-day: 10
+  email-parsing:
+    required-domain: galgotiacollege.edu
+    college-prefix: gce
+    academic-start-month: 7 # July
+    branches:
+      bit: "Information Technology"
+      it: "Information Technology"
+      bcs: "Computer Science & Engineering"
+      cse: "Computer Science & Engineering"
+      bce: "Electronics & Communication Engineering"
+      ece: "Electronics & Communication Engineering"
+      bee: "Electrical & Electronics Engineering"
+      eee: "Electrical & Electronics Engineering"
+      bme: "Mechanical Engineering"
+      me: "Mechanical Engineering"
+      bcv: "Civil Engineering"
+      ce: "Civil Engineering"
+      bai: "Artificial Intelligence & Machine Learning"
+      aiml: "Artificial Intelligence & Machine Learning"
+      bds: "Data Science"
+      ds: "Data Science"

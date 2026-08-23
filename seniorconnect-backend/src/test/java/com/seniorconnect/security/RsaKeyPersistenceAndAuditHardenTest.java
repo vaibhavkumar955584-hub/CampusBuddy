@@ -24,9 +24,29 @@ class RsaKeyPersistenceAndAuditHardenTest {
 
     @Test
     @DisplayName("Gap 1 Evidence: Persistent RSA keys survive server restart and validate tokens across restarts")
-    void testRsaKeyPersistenceAcrossSimulatedRestarts() {
-        String privateKeyPath = "keys/private.pem";
-        String publicKeyPath = "keys/public.pem";
+    void testRsaKeyPersistenceAcrossSimulatedRestarts() throws Exception {
+        java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("test-rsa-keys");
+
+        // Generate real 2048-bit RSA key pair and persist to PEM files
+        java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(2048);
+        java.security.KeyPair kp = keyGen.generateKeyPair();
+
+        java.nio.file.Path privateKeyFile = tempDir.resolve("private.pem");
+        java.nio.file.Path publicKeyFile = tempDir.resolve("public.pem");
+
+        String privatePem = "-----BEGIN PRIVATE KEY-----\n" +
+                java.util.Base64.getMimeEncoder(64, new byte[]{'\n'}).encodeToString(kp.getPrivate().getEncoded()) +
+                "\n-----END PRIVATE KEY-----";
+        String publicPem = "-----BEGIN PUBLIC KEY-----\n" +
+                java.util.Base64.getMimeEncoder(64, new byte[]{'\n'}).encodeToString(kp.getPublic().getEncoded()) +
+                "\n-----END PUBLIC KEY-----";
+
+        java.nio.file.Files.writeString(privateKeyFile, privatePem);
+        java.nio.file.Files.writeString(publicKeyFile, publicPem);
+
+        String privateKeyPath = privateKeyFile.toAbsolutePath().toString();
+        String publicKeyPath = publicKeyFile.toAbsolutePath().toString();
 
         // Instance A (First boot before restart)
         RsaKeyProvider instanceA = new RsaKeyProvider(environment);
