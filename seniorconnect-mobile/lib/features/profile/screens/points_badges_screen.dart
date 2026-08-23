@@ -70,6 +70,9 @@ class _PointsBadgesScreenState extends State<PointsBadgesScreen> {
     _fetchProfile();
   }
 
+  String? _verificationStatus;
+  String? _rejectionReason;
+
   Future<void> _fetchProfile() async {
     final user = _apiClient.currentUser;
     if (user == null) return;
@@ -91,6 +94,19 @@ class _PointsBadgesScreenState extends State<PointsBadgesScreen> {
         });
       } else {
         setState(() => _errorMessage = 'Failed to load points data');
+      }
+
+      // Fetch verification request status
+      final vRes = await _apiClient.get(ApiConstants.myVerificationRequests);
+      if (vRes.statusCode == 200) {
+        final list = jsonDecode(vRes.body) as List<dynamic>;
+        if (list.isNotEmpty) {
+          final latest = list.first;
+          setState(() {
+            _verificationStatus = latest['status'];
+            _rejectionReason = latest['rejectionReason'];
+          });
+        }
       }
     } catch (e) {
       setState(() => _errorMessage = 'Network error loading profile');
@@ -237,6 +253,103 @@ class _PointsBadgesScreenState extends State<PointsBadgesScreen> {
                               child: Text(
                                 'Role: $_placementTag',
                                 style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Tag Verification Status Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.6)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _isTagVerified
+                                    ? Icons.verified
+                                    : (_verificationStatus == 'PENDING'
+                                        ? Icons.hourglass_top_rounded
+                                        : (_verificationStatus == 'REJECTED' ? Icons.cancel_rounded : Icons.shield_outlined)),
+                                size: 20,
+                                color: _isTagVerified
+                                    ? AppTheme.success
+                                    : (_verificationStatus == 'PENDING'
+                                        ? Colors.orange
+                                        : (_verificationStatus == 'REJECTED' ? AppTheme.error : AppTheme.primary)),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Achievement Tag Verification',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.onSurface),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: _isTagVerified
+                                      ? AppTheme.success.withValues(alpha: 0.12)
+                                      : (_verificationStatus == 'PENDING'
+                                          ? Colors.orange.withValues(alpha: 0.12)
+                                          : (_verificationStatus == 'REJECTED'
+                                              ? AppTheme.error.withValues(alpha: 0.12)
+                                              : AppTheme.primary.withValues(alpha: 0.12))),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  _isTagVerified
+                                      ? 'Verified'
+                                      : (_verificationStatus == 'PENDING'
+                                          ? 'Pending Review'
+                                          : (_verificationStatus == 'REJECTED' ? 'Not Verified' : 'Unverified')),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: _isTagVerified
+                                        ? AppTheme.success
+                                        : (_verificationStatus == 'PENDING'
+                                            ? Colors.orange
+                                            : (_verificationStatus == 'REJECTED' ? AppTheme.error : AppTheme.primary)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _isTagVerified
+                                ? 'Your achievement tag "${_placementTag ?? "Placed"}" is officially verified by campus administration.'
+                                : (_verificationStatus == 'PENDING'
+                                    ? 'Your proof is under review by campus administrators. OCR-assisted triage in progress.'
+                                    : (_verificationStatus == 'REJECTED'
+                                        ? 'Verification was rejected: ${_rejectionReason ?? "Document not clear"}. You may re-upload valid proof.'
+                                        : 'Upload your official offer letter or certificate screenshot for admin verification.')),
+                            style: const TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariant, height: 1.4),
+                          ),
+                          if (!_isTagVerified && _verificationStatus != 'PENDING') ...[
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please select offer letter or certificate image (max 5MB)')),
+                                );
+                              },
+                              icon: const Icon(Icons.upload_file_rounded, size: 16),
+                              label: Text(_verificationStatus == 'REJECTED' ? 'Re-upload Proof' : 'Upload Proof Screenshot'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.primary,
+                                side: const BorderSide(color: AppTheme.primary),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
                           ],

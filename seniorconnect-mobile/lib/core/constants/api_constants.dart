@@ -25,4 +25,8 @@ class ApiConstants {
   // Profiles
   static const String profiles = '$baseUrl/profiles';
   static String profile(String userId) => '$profiles/$userId';
+
+  // Verification & Proofs
+  static const String verificationProof = '$profiles/verification/proof';
+  static const String myVerificationRequests = '$profiles/verification/my-requests';
 }

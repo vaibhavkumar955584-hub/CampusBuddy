@@ -126,6 +126,24 @@ CREATE TABLE senior_profiles (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE verification_requests (
+    id UUID PRIMARY KEY,
+    senior_id UUID NOT NULL REFERENCES users(id),
+    claimed_tag TEXT NOT NULL,
+    proof_file_url TEXT NOT NULL,
+    ocr_extracted_text TEXT,
+    ocr_keyword_match BOOLEAN,
+    ocr_confidence_score DOUBLE PRECISION,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    reviewed_by UUID REFERENCES users(id),
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    rejection_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_verification_requests_status ON verification_requests(status);
+CREATE INDEX idx_verification_requests_senior ON verification_requests(senior_id);
+
 INSERT INTO allowed_domains (id, domain, college_name, is_active, created_at)
 VALUES ('00000000-0000-0000-0000-000000000001', 'galgotiacollege.edu.in', 'Galgotias College of Engineering and Technology', TRUE, CURRENT_TIMESTAMP);
 INSERT INTO allowed_domains (id, domain, college_name, is_active, created_at)

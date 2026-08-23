@@ -54,7 +54,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/actuator/health", "/actuator/info", "/h2-console/**").permitAll()
+                        .requestMatchers("/auth/**", "/actuator/health", "/actuator/info", "/h2-console/**", "/admin/verification-requests/proof-view/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

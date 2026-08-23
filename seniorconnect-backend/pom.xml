@@ -104,6 +104,20 @@
             <version>${firebase-admin.version}</version>
         </dependency>
 
+        <!-- OCR Processing (Tess4J) -->
+        <dependency>
+            <groupId>net.sourceforge.tess4j</groupId>
+            <artifactId>tess4j</artifactId>
+            <version>5.14.0</version>
+        </dependency>
+
+        <!-- Content Inspection & MIME Sniffing -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>2.9.2</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

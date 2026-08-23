@@ -17,6 +17,8 @@ target/
 *.mv.db
 *.trace.db
 seniorconnect-backend/data/
+uploads/
+**/uploads/
 .idea/
 *.iml
 .settings/

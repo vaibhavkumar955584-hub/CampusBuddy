@@ -32,6 +32,14 @@ public class AppException extends RuntimeException {
         return new AppException(message, HttpStatus.TOO_MANY_REQUESTS, errorCode);
     }
 
+    public static AppException internalError(String message) {
+        return new AppException(message, HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR");
+    }
+
+    public static AppException internalError(String message, String errorCode) {
+        return new AppException(message, HttpStatus.INTERNAL_SERVER_ERROR, errorCode);
+    }
+
     public HttpStatus getStatus() {
         return status;
     }
