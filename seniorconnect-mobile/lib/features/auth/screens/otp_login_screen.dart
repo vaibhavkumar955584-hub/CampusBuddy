@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/services/firebase_auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../queries/screens/query_feed_screen.dart';
 import 'profile_setup_screen.dart';
 
 class OtpLoginScreen extends StatefulWidget {
@@ -15,6 +17,7 @@ class OtpLoginScreen extends StatefulWidget {
 
 class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProviderStateMixin {
   final FirebaseAuthService _authService = FirebaseAuthService();
+  final ApiClient _apiClient = ApiClient();
 
   late TabController _tabController;
   final TextEditingController _emailController = TextEditingController();
@@ -204,16 +207,30 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProvid
   }
 
   Future<void> _onAuthSuccess(User user) async {
-    if (mounted) {
+    if (!mounted) return;
+
+    // Check if user has already configured profile previously or is logging into an existing account
+    final bool completed = await _apiClient.isProfileCompleted(user.uid);
+    if (!mounted) return;
+
+    final bool hasProfileName = user.displayName != null && user.displayName!.isNotEmpty;
+
+    if (completed || (!_isSignUp && hasProfileName)) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => ProfileSetupScreen(
-            email: user.email ?? user.phoneNumber ?? '',
-          ),
-        ),
+        MaterialPageRoute(builder: (_) => const QueryFeedScreen()),
       );
+      return;
     }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileSetupScreen(
+          email: user.email ?? user.phoneNumber ?? '',
+        ),
+      ),
+    );
   }
 
   @override
@@ -317,7 +334,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProvid
 
               // Tab View Content
               SizedBox(
-                height: _tabController.index == 0 ? 320 : 250,
+                height: _tabController.index == 0 ? (_isSignUp ? 380 : 330) : 250,
                 child: TabBarView(
                   controller: _tabController,
                   children: [
@@ -383,7 +400,34 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProvid
     );
   }
 
+  String _getDetectedRoleBadge(String email) {
+    if (email.isEmpty) return '';
+    final lower = email.toLowerCase();
+    final match = RegExp(r'(\d{2})gceb|(\d{4})|([a-z]+\.(\d{2}))').firstMatch(lower);
+    if (match != null) {
+      int? year;
+      for (int i = 1; i <= match.groupCount; i++) {
+        if (match.group(i) != null && int.tryParse(match.group(i)!) != null) {
+          int raw = int.parse(match.group(i)!);
+          year = raw < 100 ? (2000 + raw) : raw;
+          break;
+        }
+      }
+      if (year != null) {
+        int studyYear = DateTime.now().year - year + (DateTime.now().month >= 7 ? 1 : 0);
+        if (studyYear >= 3) {
+          return '🌟 Auto-Detected: Year $studyYear (Senior Mentor Tier)';
+        } else {
+          return '🎓 Auto-Detected: Year ${studyYear > 0 ? studyYear : 1} (Junior Mentee Tier)';
+        }
+      }
+    }
+    return '🔒 Institutional Role Locked to Academic Record';
+  }
+
   Widget _buildEmailTab() {
+    final badgeText = _getDetectedRoleBadge(_emailController.text.trim());
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -396,7 +440,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProvid
               prefixIcon: Icon(Icons.person_outline, size: 20),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
         ],
         TextField(
           controller: _emailController,
@@ -410,7 +454,26 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProvid
           ),
           onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(height: 12),
+        if (badgeText.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: badgeText.contains('Senior') ? Colors.green.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: badgeText.contains('Senior') ? Colors.green.withValues(alpha: 0.3) : Colors.blue.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              badgeText,
+              style: TextStyle(
+                color: badgeText.contains('Senior') ? Colors.green : Colors.blue,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 10),
         TextField(
           controller: _passwordController,
           obscureText: _obscurePassword,
@@ -423,7 +486,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProvid
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         FilledButton(
           onPressed: _isLoading ? null : _handleEmailAuth,
           style: FilledButton.styleFrom(
@@ -438,7 +501,7 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> with SingleTickerProvid
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         TextButton(
           onPressed: () => setState(() {
             _isSignUp = !_isSignUp;

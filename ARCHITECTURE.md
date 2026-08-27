@@ -1,112 +1,104 @@
-# SeniorConnect — Final Production Architecture Design
+# CampusBuddy V2 — Advanced Outcome-Driven Mentorship Architecture
 
-## 1. Architecture Goal
+## 1. Executive Summary & Vision
 
-SeniorConnect is a production-grade campus mentorship and document/OCR verification platform featuring:
-* Secure authentication, token rotation, and identity masking
-* Transactional, consent-gated identity reveals
-* Multi-modal OCR proof processing for mentor tag verification
-* PostgreSQL with Row-Level Security (RLS) and unprivileged application runtime role
-* Containerized Alpine Linux runtime with native Tesseract OCR integration
-* Auditable event logging and strict boundary separation
-* Reproducible production container verification
-
----
-
-## 2. High-Level Architecture
+CampusBuddy V2 transforms the platform from a conventional **peer Q&A forum** into an **intelligent, outcome-driven mentorship system**. It combines zero-trust campus security with an AI Query Engine, 2-Stage Mentor Matching, Goal Roadmaps, and Verified Outcome Tracking.
 
 ```text
-                         ┌──────────────────────┐
-                         │      Client Apps     │
-                         │ Web / Mobile / Admin │
-                         └──────────┬───────────┘
-                                    │
-                             HTTPS / JSON
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │   Reverse Proxy /    │
-                         │   API Gateway / TLS  │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                    ┌────────────────────────────────┐
-                    │       SeniorConnect API        │
-                    │        Spring Boot 3.x         │
-                    │                                │
-                    │  ┌──────────────────────────┐  │
-                    │  │ Security / Auth (RS256)  │  │
-                    │  ├──────────────────────────┤  │
-                    │  │ REST Controllers         │  │
-                    │  ├──────────────────────────┤  │
-                    │  │ Application Services     │  │
-                    │  ├──────────────────────────┤  │
-                    │  │ OCR Orchestration        │  │
-                    │  ├──────────────────────────┤  │
-                    │  │ Document / Proof Mgmt    │  │
-                    │  └──────────────────────────┘  │
-                    └───────────────┬────────────────┘
-                                    │
-                   ┌────────────────┼────────────────┐
-                   │                │                │
-                   ▼                ▼                ▼
-             ┌───────────┐   ┌─────────────┐  ┌──────────────┐
-             │ PostgreSQL│   │ File/Object │  │ OCR Engine   │
-             │           │   │ Storage     │  │ Tesseract    │
-             │ RLS       │   │             │  │ / Tess4J     │
-             └───────────┘   └─────────────┘  └──────────────┘
-                   │
-                   ▼
-             Audit / Metadata
+Junior submits Goal/Question
+            ↓
+  AI Query Intelligence (Intent, Skills, Company, Urgency, Timeline)
+            ↓
+  ┌─────────┼─────────────────────────┐
+  ▼         ▼                         ▼
+Similar   Knowledge Base         2-Stage Mentor
+Questions (Instant Self-Serve)   Matching Engine
+                                      ↓
+                                 Personalized Guidance
+                                      ↓
+                                 Structured Mentorship Plan
+                                 (90-Day Roadmap, Tasks, Sessions)
+                                      ↓
+                                 Verified Outcome
+                                 (Offer / Internship / Skill)
+                                      ↓
+                                 Reputation Feedback Loop
 ```
 
 ---
 
-## 3. Core Architectural Principles
-
-### 3.1 API is the Primary Security Boundary
-* Direct client access to Firestore or PostgreSQL is decommissioned/blocked (`firestore.rules` enforces `allow read, write: if false;`).
-* All operations route through Spring Boot REST APIs (`ApiClient`), enforcing JWT cryptographic validation, rate-limiting, and IDOR protection.
-
-### 3.2 PostgreSQL RLS as Defense in Depth
-* Core tables (`queries`, `responses`, `reveal_requests`) enforce Row-Level Security (`FORCE ROW LEVEL SECURITY`).
-* Dedicated, least-privileged runtime database user `seniorconnect_app` (`NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`).
-* Immutable audit logs (`audit_logs`) have `UPDATE` and `DELETE` strictly revoked.
-
----
-
-## 4. OCR & Verification Architecture
+## 2. High-Level System Architecture
 
 ```text
-Senior Uploads Proof (PNG/JPG/PDF)
-        ↓
-Apache Tika Magic-Byte MIME Validation + EXIF Stripping
-        ↓
-Tesseract OCR Engine (Alpine container /usr/share/tessdata)
-        ↓
-Keyword Matching & Triage AI-Flagging
-        ↓
-Admin Review Queue (Fast-Track / Detailed Review)
-        ↓
-Admin Decision (isTagVerified = true/false)
-        ↓
-Badge Awarded + Audit Log Recorded
+┌─────────────────────────────────────────────────────────────┐
+│                    FLUTTER MOBILE APP                       │
+│  Home │ Ask / AI Analyze │ Discover │ Mentorship │ Profile  │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ HTTPS / JWT
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 SPRING BOOT 3.4.3 API GATEWAY               │
+│  Authentication │ Authorization (RS256) │ RLS Session Filter│
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              │                │                │
+              ▼                ▼                ▼
+      ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+      │ Query        │ │ 2-Stage      │ │ Mentorship   │
+      │ Intelligence │ │ Matching     │ │ Service      │
+      └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
+             │                │                │
+             ▼                ▼                ▼
+      ┌────────────────────────────────────────────────┐
+      │              APPLICATION SERVICES              │
+      │ Knowledge │ Reputation │ Notification │ Admin │
+      │ Analytics │ Moderation │ Verification  │ Audit │
+      └───────────────────────┬────────────────────────┘
+                              │
+              ┌───────────────┼────────────────┐
+              ▼               ▼                ▼
+       PostgreSQL 16       Redis 7          AI Layer
+       + RLS + GIN        Cache / Queue    Embeddings /
+       + pgvector         Distributed Lock Classification
+              │               │                │
+              └───────────────┼────────────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │ Firebase FCM    │
+                     │ Notifications   │
+                     └─────────────────┘
 ```
 
 ---
 
-## 5. Secret Management & Credential Policy
+## 3. Core Domain Modules
 
-* **No Hardcoded Passwords**: Plaintext credentials are removed from migration scripts and source code.
-* **Environment-Injected Configuration**: Secrets (`POSTGRES_PASSWORD`, `SPRING_DATASOURCE_PASSWORD`, `JWT_PRIVATE_KEY`) are passed via environment variables, container secrets, or secret managers.
-* **Tessdata Location**: Standardized to `/usr/share/tessdata` in production container images.
+1. **`auth`**: Domain-restricted college email OTP & OAuth verification.
+2. **`users`**: Academic user personas with semester, branch, and role segregation.
+3. **`queries`**: Zero-trust anonymous and public queries.
+4. **`query-intelligence`**: AI extraction of intent, skills, target companies, timelines, and urgency.
+5. **`matching`**: 2-Stage hybrid matching (Stage 1 GIN Candidate Filter + Stage 2 Weighted Multi-Attribute Ranking).
+6. **`mentorship`**: Structured goal plans (e.g. 90-Day SDE Prep), task tracking, and 1-on-1 sessions.
+7. **`outcomes`**: Verified career outcomes (Internship, Placement, Skill Mastery) with administrative proof verification.
+8. **`reputation`**: Outcome-weighted mentor trust scoring (Helpful rate + Sessions + Placements enabled).
+9. **`privacy`**: 4-Tier granular privacy states (Level 0 Anonymous → Level 1 Limited → Level 2 Reveal → Level 3 Mentorship).
+10. **`moderation`**: Abuse, harassment, and policy violation triage.
+11. **`verification`**: Multi-modal OCR proof triage and admin credential approval.
+12. **`audit`**: Immutable, append-only security logs.
 
 ---
 
-## 6. Container Runtime & Verification
+## 4. 2-Stage Mentor Matching Algorithm
 
-The production Docker container (`eclipse-temurin:21-jre-alpine`) packages:
-* Native `tesseract-ocr` and `tesseract-ocr-data-eng` packages
-* Unprivileged `appuser` runtime context
-* Startup-time diagnostic sanity check (`initSanityCheck`) in `ProofOcrService`
-* Real image OCR execution verification from outside the container
+* **Stage 1 (Candidate Retrieval):** PostgreSQL GIN index array-overlap on tags/skills (`sp.tags && :queryTags`) narrows down candidates from thousands to manageable subset.
+* **Stage 2 (Weighted Ranking):**
+$$\text{Score} = 30\% \text{ Skill} + 20\% \text{ Company} + 15\% \text{ Experience} + 10\% \text{ Quality} + 10\% \text{ Helpful Rate} + 5\% \text{ Reputation} + 5\% \text{ Availability} + 5\% \text{ History}$$
+
+---
+
+## 5. Security & Isolation
+
+* **PostgreSQL RLS**: Enforced on `queries`, `responses`, `reveal_requests`, and `mentorship_plans`.
+* **RS256 Asymmetric JWT**: Token rotation with secure Redis invalidation.
+* **Server-Side Authorization**: Complete zero-trust architecture where all client actions are validated against server-side user context.

@@ -195,31 +195,46 @@ class _MatchedQueriesScreenState extends State<MatchedQueriesScreen> {
               // Top Row: Anonymity Badge + Branch Pill + Match Badge
               Row(
                 children: [
-                  AnonymityBadge(
-                    isAnonymous: query.isAnonymousDisplay,
-                    studentName: query.juniorName,
-                    isCompact: true,
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFDFF1F5),
-                      borderRadius: BorderRadius.circular(9999),
-                    ),
+                  Flexible(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.tune_rounded, size: 11, color: primaryCol),
-                        const SizedBox(width: 3),
-                        Text(
-                          query.juniorBranch ?? 'General',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: primaryCol),
+                        Flexible(
+                          child: AnonymityBadge(
+                            isAnonymous: query.isAnonymousDisplay,
+                            studentName: query.juniorName,
+                            isCompact: true,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFDFF1F5),
+                              borderRadius: BorderRadius.circular(9999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.tune_rounded, size: 11, color: primaryCol),
+                                const SizedBox(width: 3),
+                                Flexible(
+                                  child: Text(
+                                    query.juniorBranch ?? 'General',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: primaryCol),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(

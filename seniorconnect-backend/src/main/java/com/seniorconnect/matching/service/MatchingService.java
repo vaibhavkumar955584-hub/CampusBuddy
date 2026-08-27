@@ -122,4 +122,80 @@ public class MatchingService {
 
         return score;
     }
+
+    @Transactional(readOnly = true)
+    public List<com.seniorconnect.matching.dto.MentorMatchResultDto> matchSeniorsWithDetails(Query query, int limit) {
+        if (query == null) return Collections.emptyList();
+
+        List<String> queryTagsList = query.getTagsList();
+        Set<String> queryTagSet = queryTagsList.stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+
+        String branch = query.getJunior() != null ? query.getJunior().getBranch() : null;
+        UUID juniorId = query.getJunior() != null ? query.getJunior().getId() : null;
+
+        List<SeniorProfile> candidateProfiles;
+        if (!queryTagsList.isEmpty()) {
+            String csv = String.join(",", queryTagsList);
+            try {
+                candidateProfiles = seniorProfileRepository.findMatchingProfilesNative(csv);
+                if (candidateProfiles.isEmpty() && branch != null) {
+                    candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
+                }
+            } catch (Exception e) {
+                candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
+            }
+        } else {
+            candidateProfiles = seniorProfileRepository.findCandidateProfilesByBranch(branch);
+        }
+
+        return candidateProfiles.stream()
+                .filter(p -> p.getUser() != null && (p.getUser().getRole() == Role.SENIOR || (p.getUser().getRole() == Role.JUNIOR && p.getUser().isMentorModeActive())) && !p.getUser().isSuspended())
+                .filter(p -> juniorId == null || !p.getUser().getId().equals(juniorId))
+                .map(p -> {
+                    User u = p.getUser();
+                    List<String> matched = new ArrayList<>();
+                    boolean companyMatch = false;
+
+                    for (String pt : p.getTags()) {
+                        for (String qt : queryTagSet) {
+                            if (pt.toLowerCase().contains(qt) || qt.contains(pt.toLowerCase())) {
+                                matched.add(pt);
+                            }
+                        }
+                    }
+
+                    if (p.getPlacementTag() != null) {
+                        for (String qt : queryTagSet) {
+                            if (p.getPlacementTag().toLowerCase().contains(qt)) {
+                                companyMatch = true;
+                            }
+                        }
+                    }
+
+                    int rawScore = calculateSeniorMatchScore(p, query, queryTagSet);
+                    int percentage = Math.min(99, Math.max(65, rawScore * 2 + 50));
+
+                    String headline = (companyMatch ? p.getPlacementTag() + " Mentor • " : "") +
+                            (matched.isEmpty() ? "General Academic Mentor" : String.join(", ", matched.stream().limit(2).toList()));
+
+                    return new com.seniorconnect.matching.dto.MentorMatchResultDto(
+                            u.getId(),
+                            u.getFullName(),
+                            u.getEmail(),
+                            u.getBranch(),
+                            p.getPlacementTag(),
+                            p.isTagVerified(),
+                            p.getPoints(),
+                            percentage,
+                            matched,
+                            companyMatch,
+                            headline
+                    );
+                })
+                .sorted(Comparator.comparingInt(com.seniorconnect.matching.dto.MentorMatchResultDto::matchPercentage).reversed())
+                .limit(limit > 0 ? limit : 10)
+                .collect(Collectors.toList());
+    }
 }

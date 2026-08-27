@@ -12,6 +12,6 @@ void main() {
       ),
     );
     expect(find.byType(RoleSelectionScreen), findsOneWidget);
-    expect(find.text('Welcome to SeniorConnect'), findsOneWidget);
+    expect(find.text('CampusBuddy Institutional Gateway'), findsOneWidget);
   });
 }

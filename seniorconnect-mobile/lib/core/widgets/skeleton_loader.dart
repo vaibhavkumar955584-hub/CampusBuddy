@@ -156,7 +156,7 @@ class SkeletonFeedList extends StatelessWidget {
       itemCount: count,
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      itemBuilder: (_, __) => const SkeletonCard(),
+      itemBuilder: (_, index) => const SkeletonCard(),
     );
   }
 }

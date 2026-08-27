@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../queries/screens/query_feed_screen.dart';
 
@@ -18,6 +19,7 @@ class ProfileSetupScreen extends StatefulWidget {
 }
 
 class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
+  final ApiClient _apiClient = ApiClient();
   late TextEditingController _nameController;
   late TextEditingController _branchController;
   late TextEditingController _customTagController;
@@ -45,15 +47,28 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   List<String> _tags = [];
   bool _isLoading = false;
+  Map<String, dynamic>? _autoParsed;
 
   @override
   void initState() {
     super.initState();
-    final p = widget.parsedData;
 
-    _nameController = TextEditingController(
-      text: FirebaseAuth.instance.currentUser?.displayName ?? widget.email.split('@')[0],
-    );
+    _autoParsed = widget.parsedData ?? _parseEmailMetadata(widget.email);
+    final p = _autoParsed;
+
+    String initialName = '';
+    if (p != null && p['name'] != null && (p['name'] as String).isNotEmpty) {
+      initialName = p['name'];
+    } else {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user?.displayName != null && user!.displayName!.isNotEmpty) {
+        initialName = user.displayName!;
+      } else {
+        final emailPart = widget.email.split('@').first;
+        initialName = _cleanName(emailPart);
+      }
+    }
+    _nameController = TextEditingController(text: initialName);
 
     String defaultBranch = p != null && p['branchName'] != null
         ? p['branchName']
@@ -69,12 +84,89 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
     if (p != null && p['autoTags'] != null) {
       final rawTags = p['autoTags'] as List<dynamic>;
-      _tags = rawTags.map((t) => t.toString()).toList();
+      _tags = rawTags.map((t) => t.toString()).toSet().toList();
     } else {
       _tags = [defaultBranch, '2024 Batch', '3rd Year'];
     }
 
     _customTagController = TextEditingController();
+  }
+
+  static String _cleanName(String raw) {
+    if (raw.isEmpty) return 'Student';
+    // If raw is like "vaibhav.24gcebit052", take "vaibhav"
+    String first = raw.contains('.') ? raw.split('.').first : raw;
+    // Strip digits
+    first = first.replaceAll(RegExp(r'[0-9_]'), '');
+    if (first.isEmpty) return 'Student';
+    return first[0].toUpperCase() + first.substring(1).toLowerCase();
+  }
+
+  static Map<String, dynamic>? _parseEmailMetadata(String email) {
+    if (!email.contains('@')) return null;
+    final prefix = email.split('@').first.toLowerCase();
+
+    // Regex to match admission year + [gce] + branch code + roll number
+    // Handles: vaibhav.24gcebit052, 24gcebit052, aman.23gcebcs012, etc.
+    final match = RegExp(r'(?:^|[._])(\d{2})(?:gce)?([a-z]+)(\d{2,4})', caseSensitive: false).firstMatch(prefix);
+    if (match != null) {
+      final yearStr = match.group(1)!;
+      final rawBranch = match.group(2)!.toLowerCase();
+      final roll = match.group(3)!;
+
+      final admissionYear = 2000 + int.parse(yearStr);
+      final batchLabel = '$admissionYear Batch';
+
+      const branchMap = {
+        'bit': 'Information Technology',
+        'it': 'Information Technology',
+        'bcs': 'Computer Science & Engineering',
+        'cse': 'Computer Science & Engineering',
+        'bce': 'Electronics & Communication Engineering',
+        'ece': 'Electronics & Communication Engineering',
+        'bee': 'Electrical & Electronics Engineering',
+        'eee': 'Electrical & Electronics Engineering',
+        'bme': 'Mechanical Engineering',
+        'me': 'Mechanical Engineering',
+        'bcv': 'Civil Engineering',
+        'ce': 'Civil Engineering',
+        'bai': 'Artificial Intelligence & Machine Learning',
+        'aiml': 'Artificial Intelligence & Machine Learning',
+        'bds': 'Data Science',
+        'ds': 'Data Science',
+      };
+
+      final branchName = branchMap[rawBranch] ?? 'Information Technology';
+
+      final now = DateTime.now();
+      int academicYear = now.year - admissionYear + (now.month >= 8 ? 1 : 0);
+      String yearLabel;
+      if (academicYear <= 1) {
+        yearLabel = '1st Year';
+      } else if (academicYear == 2) {
+        yearLabel = '2nd Year';
+      } else if (academicYear == 3) {
+        yearLabel = '3rd Year';
+      } else if (academicYear == 4) {
+        yearLabel = '4th Year';
+      } else {
+        yearLabel = 'Alumni';
+      }
+
+      String name = _cleanName(prefix);
+
+      return {
+        'isMatched': true,
+        'name': name,
+        'branchName': branchName,
+        'branchCode': rawBranch,
+        'batchLabel': batchLabel,
+        'yearLabel': yearLabel,
+        'rollNumber': roll,
+        'autoTags': [branchName, batchLabel, yearLabel],
+      };
+    }
+    return null;
   }
 
   void _addTag() {
@@ -95,6 +187,17 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Future<void> _saveAndContinue() async {
     setState(() => _isLoading = true);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final finalName = _nameController.text.trim();
+        if (finalName.isNotEmpty) {
+          await user.updateDisplayName(finalName);
+        }
+        await _apiClient.markProfileCompleted(user.uid);
+      } catch (_) {}
+    }
+
     if (mounted) {
       Navigator.pushReplacement(
         context,
@@ -105,7 +208,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.parsedData;
+    final p = _autoParsed;
     final isAutoMatched = p != null && p['isMatched'] == true;
 
     return Scaffold(
@@ -113,44 +216,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.background,
         elevation: 0,
-        leadingWidth: 100,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Center(
-                  child: Text(
-                    'SC',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Home',
-                style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ],
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppTheme.onSurface),
+          onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: const CircleAvatar(
-              radius: 16,
-              backgroundColor: AppTheme.primary,
-              child: Icon(Icons.person, size: 18, color: Colors.white),
-            ),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-        ],
+        title: const Text(
+          'Complete Profile',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.onSurface),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -196,7 +269,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Pre-filled from roll format (${p['batchLabel'] ?? ""}, ${p['branchCode']?.toString().toUpperCase() ?? ""}). Editable for lateral-entry & repeaters.',
+                              'Pre-filled from roll format (${p['batchLabel'] ?? ""}, ${p['branchCode']?.toString().toUpperCase() ?? ""}). Editable anytime.',
                               style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
                             ),
                           ],
@@ -220,7 +293,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Non-standard roll format detected. Please select your branch and academic year manually.',
+                          'Select your branch and academic year below to finalize your campus profile.',
                           style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 12),
                         ),
                       ),
@@ -241,15 +314,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               const Text('Branch / Department', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.onSurface)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _standardBranches.contains(_branchController.text)
                     ? _branchController.text
                     : 'Other / Dual Degree',
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.school_outlined, size: 20, color: AppTheme.outline),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 ),
                 dropdownColor: AppTheme.surfaceContainerLowest,
                 items: _standardBranches.map((b) {
-                  return DropdownMenuItem(value: b, child: Text(b, style: const TextStyle(fontSize: 14)));
+                  return DropdownMenuItem(
+                    value: b,
+                    child: Text(
+                      b,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
                 }).toList(),
                 onChanged: (val) {
                   if (val != null) {
@@ -278,13 +360,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _selectedYearOfStudy,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.calendar_today_outlined, size: 20, color: AppTheme.outline),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 ),
                 dropdownColor: AppTheme.surfaceContainerLowest,
                 items: _yearOptions.map((y) {
-                  return DropdownMenuItem(value: y, child: Text(y, style: const TextStyle(fontSize: 14)));
+                  return DropdownMenuItem(
+                    value: y,
+                    child: Text(
+                      y,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
                 }).toList(),
                 onChanged: (val) {
                   if (val != null) {
@@ -333,24 +424,31 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
 
               const SizedBox(height: 36),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveAndContinue,
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
-                    : const Text('Confirm & Enter Campus Feed'),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _saveAndContinue,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                        )
+                      : const Text(
+                          'Confirm & Enter Campus Feed',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+                        ),
+                ),
               ),
               const SizedBox(height: 16),
             ],
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications_none_outlined), label: 'Alerts'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
-        ],
       ),
     );
   }

@@ -77,9 +77,6 @@ public class AuthService {
 
         String normEmail = request.email().toLowerCase();
         User user = userRepository.findByEmail(normEmail).orElseGet(() -> {
-            Role role = requestedRole != null ? requestedRole : Role.JUNIOR;
-            String name = fullName != null && !fullName.isBlank() ? fullName : normEmail.split("@")[0];
-
             Integer admissionYear = null;
             Integer currentYearOfStudy = null;
             try {
@@ -91,6 +88,17 @@ public class AuthService {
             } catch (Exception ignored) {
             }
 
+            if (semester != null && semester >= 1) {
+                int semYear = (semester + 1) / 2;
+                if (currentYearOfStudy == null || currentYearOfStudy < semYear) {
+                    currentYearOfStudy = semYear;
+                }
+            }
+
+            boolean isSeniorAcademic = (currentYearOfStudy != null && currentYearOfStudy >= 3) || (semester != null && semester >= 5);
+            Role role = isSeniorAcademic ? Role.SENIOR : (requestedRole != null ? requestedRole : Role.JUNIOR);
+            String name = fullName != null && !fullName.isBlank() ? fullName : normEmail.split("@")[0];
+
             User newUser = new User(
                     UUID.randomUUID(),
                     normEmail,
@@ -99,8 +107,8 @@ public class AuthService {
                     branch,
                     semester,
                     currentYearOfStudy,
-                    false,
-                    false,
+                    isSeniorAcademic,
+                    isSeniorAcademic,
                     admissionYear,
                     false,
                     Instant.now(),
@@ -115,6 +123,13 @@ public class AuthService {
 
         // Run self-healing year-of-study and mentor-eligibility recalculation on every successful login
         yearOfStudyService.recalculate(user);
+
+        // Auto-promote semester 5+ / Year 3+ students to SENIOR
+        if ((user.getSemester() != null && user.getSemester() >= 5) || (user.getCurrentYearOfStudy() != null && user.getCurrentYearOfStudy() >= 3)) {
+            user.setRole(Role.SENIOR);
+            user.setMentorEligible(true);
+            userRepository.save(user);
+        }
 
         String accessToken = jwtService.generateAccessToken(user);
         String rawRefreshToken = generateSecureToken();
@@ -134,6 +149,92 @@ public class AuthService {
         refreshTokenRepository.save(token);
 
         auditService.logEvent(AuditEventType.AUTH_TOKEN_ISSUED, user.getId(), clientIp, "Logged in via OTP");
+
+        return AuthResponse.of(
+                accessToken,
+                rawRefreshToken,
+                accessTokenExpirationSeconds,
+                UserDto.fromUser(user)
+        );
+    }
+
+    @Transactional
+    public AuthResponse directLogin(DirectLoginRequest request, String clientIp) {
+        String normEmail = request.email().toLowerCase().trim();
+        User user = userRepository.findByEmail(normEmail).orElseGet(() -> {
+            Integer admissionYear = null;
+            Integer currentYearOfStudy = null;
+            try {
+                ParsedEmailDto parsed = emailParserService.parseCollegeEmail(normEmail);
+                if (parsed != null && parsed.isMatched()) {
+                    admissionYear = parsed.admissionYear();
+                    currentYearOfStudy = parsed.yearOfStudy();
+                }
+            } catch (Exception ignored) {
+            }
+
+            Integer semester = request.semester();
+            if (semester != null && semester >= 1) {
+                int semYear = (semester + 1) / 2;
+                if (currentYearOfStudy == null || currentYearOfStudy < semYear) {
+                    currentYearOfStudy = semYear;
+                }
+            }
+
+            boolean isSeniorAcademic = (currentYearOfStudy != null && currentYearOfStudy >= 3) || (semester != null && semester >= 5);
+            Role role = isSeniorAcademic ? Role.SENIOR : (request.role() != null ? request.role() : Role.JUNIOR);
+            String name = request.fullName() != null && !request.fullName().isBlank() ? request.fullName() : normEmail.split("@")[0];
+
+            User newUser = new User(
+                    UUID.randomUUID(),
+                    normEmail,
+                    name,
+                    role,
+                    request.branch(),
+                    semester,
+                    currentYearOfStudy,
+                    isSeniorAcademic,
+                    isSeniorAcademic,
+                    admissionYear,
+                    false,
+                    Instant.now(),
+                    null
+            );
+            return userRepository.save(newUser);
+        });
+
+        if (user.isSuspended()) {
+            throw AppException.forbidden("Your account is currently suspended pending review", "ACCOUNT_SUSPENDED");
+        }
+
+        // Run self-healing year-of-study and mentor-eligibility recalculation
+        yearOfStudyService.recalculate(user);
+
+        if ((user.getSemester() != null && user.getSemester() >= 5) || (user.getCurrentYearOfStudy() != null && user.getCurrentYearOfStudy() >= 3)) {
+            user.setRole(Role.SENIOR);
+            user.setMentorEligible(true);
+            userRepository.save(user);
+        }
+
+        String accessToken = jwtService.generateAccessToken(user);
+        String rawRefreshToken = generateSecureToken();
+        String tokenHash = hashToken(rawRefreshToken);
+
+        String fp = request.deviceFingerprint() != null ? request.deviceFingerprint() : "mobile-client";
+        RefreshToken token = new RefreshToken(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                user,
+                tokenHash,
+                fp,
+                false,
+                false,
+                Instant.now().plusSeconds(refreshTokenExpirationSeconds),
+                Instant.now()
+        );
+        refreshTokenRepository.save(token);
+
+        auditService.logEvent(AuditEventType.AUTH_TOKEN_ISSUED, user.getId(), clientIp, "Logged in via direct/mobile sync");
 
         return AuthResponse.of(
                 accessToken,

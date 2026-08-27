@@ -18,9 +18,9 @@ public class EmailParserService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailParserService.class);
 
-    // Pattern: ^[a-z]+\.(\d{2})([a-z]+)(\d+)@galgotiacollege\.edu$
+    // Pattern: ^(?:[a-z0-9._%+-]+[._])?(\\d{2})([a-z]+)(\\d+)@.*$
     private static final Pattern STUDENT_EMAIL_PATTERN = Pattern.compile(
-            "^[a-z]+\\.(\\d{2})([a-z]+)(\\d+)@galgotiacollege\\.edu$",
+            "^(?:[a-z0-9._%+-]+[._])?(\\d{2})([a-z]+)(\\d+)@.*$",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -50,10 +50,10 @@ public class EmailParserService {
 
         String normEmail = email.trim().toLowerCase();
 
-        // 1. Domain validation (must be @galgotiacollege.edu)
-        String domainSuffix = "@" + config.getRequiredDomain().toLowerCase();
-        if (!normEmail.endsWith(domainSuffix)) {
-            log.warn("DOMAIN_REJECTION: Email [{}] does not end with required domain [{}]", email, domainSuffix);
+        // 1. Domain validation (allows galgotiacollege.edu or galgotiacollege.edu.in)
+        String baseDomain = config.getRequiredDomain().toLowerCase();
+        if (!normEmail.contains("@" + baseDomain) && !normEmail.contains("@" + baseDomain + ".in")) {
+            log.warn("DOMAIN_REJECTION: Email [{}] does not match required domain [{}]", email, baseDomain);
             throw AppException.badRequest(
                     "Registration requires a @" + config.getRequiredDomain() + " college email address.",
                     "DOMAIN_NOT_ALLOWED"

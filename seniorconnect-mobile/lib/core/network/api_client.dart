@@ -22,6 +22,51 @@ class ApiClient {
   Future<String?> getAccessToken() async => await _storage.read(key: 'access_token');
   Future<String?> getRefreshToken() async => await _storage.read(key: 'refresh_token');
 
+  Future<bool> isProfileCompleted(String uid) async {
+    final val = await _storage.read(key: 'profile_completed_$uid');
+    return val == 'true';
+  }
+
+  Future<void> markProfileCompleted(String uid) async {
+    await _storage.write(key: 'profile_completed_$uid', value: 'true');
+  }
+
+  Future<bool> syncBackendAuth({
+    required String email,
+    String? fullName,
+    String? branch,
+    String? role,
+  }) async {
+    try {
+      final res = await _client.post(
+        Uri.parse(ApiConstants.directLogin),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'fullName': fullName ?? email.split('@')[0],
+          'branch': branch ?? 'Information Technology',
+          'role': role ?? 'SENIOR',
+          'deviceFingerprint': 'flutter-mobile-client',
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        await saveTokens(
+          accessToken: data['accessToken'],
+          refreshToken: data['refreshToken'],
+        );
+        if (data['user'] != null) {
+          currentUser = UserModel.fromJson(data['user']);
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> clearSession() async {
     await _storage.deleteAll();
     currentUser = null;

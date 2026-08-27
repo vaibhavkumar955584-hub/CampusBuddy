@@ -1,18 +1,19 @@
-# SeniorConnect (CampusBuddy) — Complete Project Flow & Architecture Guide
+# CampusBuddy V2 — Complete Project Flow & Lifecycle Guide
 
-SeniorConnect (CampusBuddy) ek peer-to-peer college mentorship platform hai jo **Juniors** (asking questions anonymously) aur **Seniors/Alumni** (verified mentors providing career/academic guidance) ko securely connect karta hai.
+CampusBuddy V2 ek intelligent, outcome-driven mentorship platform hai jo **Juniors** (asking questions & pursuing career goals) aur **Verified Mentors** (seniors & alumni) ko connect karke measurable career outcomes (Interviews, Internships, Job Offers) achieve karwata hai.
 
 ---
 
-## 🏗️ 1. High-Level System Architecture
+## 🏗️ 1. CampusBuddy V2 System Architecture
 
 ```mermaid
 graph TD
-    A[Flutter Mobile App<br/>Android / iOS] -->|HTTPS REST API| B[Spring Boot 3.4.3 Backend]
+    A[Flutter Mobile App<br/>Home / Ask / Mentorship] -->|HTTPS REST API| B[Spring Boot 3.4.3 Backend]
     B -->|RS256 JWT Auth / RBAC| C[Security & RLS Filter]
-    B -->|Smart Tag Matching<br/>GIN Index & Arrays| D[(PostgreSQL 16 DB<br/>RLS Protected)]
-    B -->|Rate Limiting & OTP Cache| E[(Redis 7 Cluster)]
-    B -->|Push Notifications| F[Firebase Cloud Messaging FCM]
+    B -->|AI Query Intelligence<br/>Intent & Skill Extraction| D[AI & Semantic Engine]
+    B -->|2-Stage Matching<br/>GIN Filter + Weighted Ranking| E[(PostgreSQL 16 DB<br/>RLS Protected)]
+    B -->|Rate Limiting & OTP Cache| F[(Redis 7 Cluster)]
+    B -->|Context-Rich Notifications| G[Firebase Cloud Messaging FCM]
 ```
 
 ---
@@ -21,43 +22,71 @@ graph TD
 
 | Role | Access & Capabilities |
 |---|---|
-| **Junior (Student)** | - Domain-restricted college email OTP / Google login.<br/>- Anonymously queries post karna without revealing real name/branch.<br/>- Seniors ke responses dekhna aur optional **Identity Reveal** request accept/reject karna. |
-| **Senior / Mentor** | - College verified domain account (Semester 5+ / Alumni).<br/>- Feed me open questions dekhna aur match feed me targeted questions receive karna.<br/>- Placement credentials verify karwa kar **Verified Mentor** & milestone badges earn karna.<br/>- Mutual reveal request initiate karna. |
-| **Admin** | - Platform moderation, offensive query reports review karna, aur Senior placement verification approve/reject karna.<br/>- Append-only audit logs access karna. |
+| **Junior (Student)** | - Domain-restricted college email / OAuth login.<br/>- Goal formulation with AI Query Analysis.<br/>- Anonymous & public questions post karna.<br/>- Mentorship roadmap subscribe karna & weekly tasks complete karna.<br/>- 4-Tier Privacy control (Level 0 Anonymous → Level 3 Direct Mentorship). |
+| **Senior (Mentor)** | - Verified domain account with achievement credentials (Offer letters verified via multi-modal OCR).<br/>- 2-Stage targeted matching feed with match percentage.<br/>- Goal roadmap guidance, 1-on-1 sessions & feedback provide karna.<br/>- Outcome-driven reputation badges (Placements Enabled, Top Contributor). |
+| **Admin** | - Platform moderation, verification triage, outcome validation, and append-only audit logs access. |
 
 ---
 
-## 🔄 3. End-to-End Core Flows
+## 🔄 3. End-to-End V2 Core Flows
 
-### 📌 Flow 1: Domain-Gated Authentication & Token Rotation Flow
+### 📌 Flow 1: AI Query Intelligence & Similar Questions Discovery Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Junior / Senior
-    participant App as Flutter Mobile App
-    participant Backend as Spring Boot Auth Service
-    participant Redis as Redis Cache
-    participant DB as PostgreSQL DB
+    actor Junior as Junior Student
+    participant App as Mobile App
+    participant AI as AI Query Engine
+    participant DB as PostgreSQL + Vector DB
+    participant QuerySvc as Query Service
 
-    User->>App: College Email Enter Karta Hai (@galgotiacollege.edu.in)
-    App->>Backend: POST /api/v1/auth/otp/request
-    Backend->>Backend: Domain Whitelist Check & Email Prefix Parse (Branch, Year)
-    Backend->>Redis: 6-Digit Secure OTP Store (TTL: 5 mins)
-    Backend-->>App: OTP Sent Successfully (Dev Log / Mail)
-    User->>App: OTP Submit Karta Hai
-    App->>Backend: POST /api/v1/auth/otp/verify
-    Backend->>Redis: Verify OTP & Invalidate
-    Backend->>DB: User Fetch or Auto-Register
-    Backend->>Backend: RS256 Asymmetric JWT Access Token + Refresh Token Generate
-    Backend-->>App: Return { accessToken, refreshToken, userDetails }
+    Junior->>App: Submits Goal: "3 months for Amazon SDE placement"
+    App->>AI: POST /api/v1/queries/analyze
+    AI->>AI: Extract: Intent=PLACEMENT_PREPARATION, Company=Amazon, Skills=[DSA, Problem Solving], Timeline=90d
+    AI->>DB: Semantic Search for Similar Answered Roadmaps
+    AI-->>App: Return { structuredAnalysis, similarRoadmaps, topMatchedMentors }
+    alt Junior views instant answer
+        Junior->>App: Views Existing Verified Roadmap (Instant Self-Serve)
+    else Junior asks community
+        Junior->>QuerySvc: POST /api/v1/queries (Publish with Structured Metadata)
+    end
 ```
 
 ---
 
-### 📌 Flow 2: Zero-Trust Anonymous Query Creation & Feed Flow
+### 📌 Flow 2: 2-Stage Intelligent Mentor Matching Flow
 
 ```mermaid
+sequenceDiagram
+    autonumber
+    participant MatchingSvc as 2-Stage Matching Service
+    participant DB as PostgreSQL (GIN Index)
+    participant FCM as Notification Service (FCM)
+    actor Senior as Verified Senior Mentor
+
+    MatchingSvc->>DB: Stage 1: Candidate Retrieval via GIN array overlap (sp.tags && query.skills)
+    DB-->>MatchingSvc: 40 Candidate Mentors List
+    MatchingSvc->>MatchingSvc: Stage 2: Weighted Ranking Score (Skills 30% + Company 20% + Exp 15% + Quality 10% + Helpful 10% + Rep 5% + Avail 5%)
+    MatchingSvc->>FCM: Send High-Context Notification: "🎯 98% Match: Amazon SDE Query"
+    FCM-->>Senior: Push Alert on Mobile
+    Senior->>MatchingSvc: GET /api/v1/matching/feed (Targeted Queries Ranked by Match %)
+```
+
+---
+
+### 📌 Flow 3: Mentorship Roadmap, Sessions & Outcome Verification Flow
+
+```mermaid
+stateDiagram-v2
+    [*] --> GoalDefined: Junior Starts 90-Day Roadmap
+    GoalDefined --> WeeklyMilestones: Weekly DSA & System Design Tasks
+    WeeklyMilestones --> MockInterviewSession: 1-on-1 Senior Mentorship Session
+    MockInterviewSession --> OutcomeSubmitted: Junior Clears Placement/Internship
+    OutcomeSubmitted --> AdminVerification: Offer Letter Proof Uploaded
+    AdminVerification --> ReputationUpdated: +50 Reputation & 'Placements Enabled' Badge to Mentor
+    ReputationUpdated --> [*]
+```
 sequenceDiagram
     autonumber
     actor Junior as Junior Student

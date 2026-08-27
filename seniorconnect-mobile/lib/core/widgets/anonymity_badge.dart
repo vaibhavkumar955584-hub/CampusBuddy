@@ -67,12 +67,16 @@ class AnonymityBadge extends StatelessWidget {
           children: [
             Icon(Icons.person_rounded, size: isCompact ? 11 : 13, color: fgColor),
             const SizedBox(width: 4),
-            Text(
-              displayName,
-              style: TextStyle(
-                fontSize: isCompact ? 10 : 11,
-                fontWeight: FontWeight.w700,
-                color: fgColor,
+            Flexible(
+              child: Text(
+                displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: isCompact ? 10 : 11,
+                  fontWeight: FontWeight.w700,
+                  color: fgColor,
+                ),
               ),
             ),
           ],

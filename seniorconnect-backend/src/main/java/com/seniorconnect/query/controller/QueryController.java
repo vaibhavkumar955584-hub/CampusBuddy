@@ -23,9 +23,21 @@ import java.util.UUID;
 public class QueryController {
 
     private final QueryService queryService;
+    private final com.seniorconnect.query.service.QueryIntelligenceService queryIntelligenceService;
 
-    public QueryController(QueryService queryService) {
+    public QueryController(
+            QueryService queryService,
+            com.seniorconnect.query.service.QueryIntelligenceService queryIntelligenceService
+    ) {
         this.queryService = queryService;
+        this.queryIntelligenceService = queryIntelligenceService;
+    }
+
+    @PostMapping("/analyze")
+    public ResponseEntity<com.seniorconnect.query.dto.QueryAnalysisDto> analyzeQuery(
+            @Valid @RequestBody com.seniorconnect.query.dto.AnalyzeQueryRequest request
+    ) {
+        return ResponseEntity.ok(queryIntelligenceService.analyzeQuery(request));
     }
 
     @PostMapping

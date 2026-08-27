@@ -60,6 +60,16 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/direct-login")
+    public ResponseEntity<AuthResponse> directLogin(
+            @Valid @RequestBody DirectLoginRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String clientIp = extractClientIp(httpRequest);
+        AuthResponse response = authService.directLogin(request, clientIp);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request,

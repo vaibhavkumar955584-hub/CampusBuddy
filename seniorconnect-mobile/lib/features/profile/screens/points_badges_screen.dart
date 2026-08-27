@@ -290,11 +290,15 @@ class _PointsBadgesScreenState extends State<PointsBadgesScreen> {
                                         : (_verificationStatus == 'REJECTED' ? AppTheme.error : AppTheme.primary)),
                               ),
                               const SizedBox(width: 8),
-                              const Text(
-                                'Achievement Tag Verification',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.onSurface),
+                              const Expanded(
+                                child: Text(
+                                  'Tag Verification',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.onSurface),
+                                ),
                               ),
-                              const Spacer(),
+                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
@@ -304,15 +308,15 @@ class _PointsBadgesScreenState extends State<PointsBadgesScreen> {
                                           ? Colors.orange.withValues(alpha: 0.12)
                                           : (_verificationStatus == 'REJECTED'
                                               ? AppTheme.error.withValues(alpha: 0.12)
-                                              : AppTheme.primary.withValues(alpha: 0.12))),
+                                              : AppTheme.outlineVariant.withValues(alpha: 0.5))),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   _isTagVerified
-                                      ? 'Verified'
+                                      ? 'VERIFIED'
                                       : (_verificationStatus == 'PENDING'
-                                          ? 'Pending Review'
-                                          : (_verificationStatus == 'REJECTED' ? 'Not Verified' : 'Unverified')),
+                                          ? 'PENDING'
+                                          : (_verificationStatus == 'REJECTED' ? 'REJECTED' : 'UNVERIFIED')),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -320,7 +324,7 @@ class _PointsBadgesScreenState extends State<PointsBadgesScreen> {
                                         ? AppTheme.success
                                         : (_verificationStatus == 'PENDING'
                                             ? Colors.orange
-                                            : (_verificationStatus == 'REJECTED' ? AppTheme.error : AppTheme.primary)),
+                                            : (_verificationStatus == 'REJECTED' ? AppTheme.error : AppTheme.onSurfaceVariant)),
                                   ),
                                 ),
                               ),

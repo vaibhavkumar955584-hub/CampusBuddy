@@ -7,14 +7,14 @@ import '../../../core/theme/app_theme.dart';
 class ReportModal extends StatefulWidget {
   final String targetType; // 'QUERY' or 'RESPONSE'
   final String targetId;
-  final String reportedUserId;
+  final String? reportedUserId;
   final String? targetTitle;
 
   const ReportModal({
     super.key,
     required this.targetType,
     required this.targetId,
-    required this.reportedUserId,
+    this.reportedUserId,
     this.targetTitle,
   });
 
@@ -22,7 +22,7 @@ class ReportModal extends StatefulWidget {
     BuildContext context, {
     required String targetType,
     required String targetId,
-    required String reportedUserId,
+    String? reportedUserId,
     String? targetTitle,
   }) {
     return showModalBottomSheet<bool>(
@@ -75,14 +75,18 @@ class _ReportModalState extends State<ReportModal> {
         : _selectedReason!;
 
     try {
+      final Map<String, dynamic> body = {
+        'targetType': widget.targetType,
+        'targetId': widget.targetId,
+        'reason': reasonText,
+      };
+      if (widget.reportedUserId != null) {
+        body['reportedUserId'] = widget.reportedUserId;
+      }
+
       final res = await _apiClient.post(
         ApiConstants.reports,
-        body: {
-          'reportedUserId': widget.reportedUserId,
-          'targetType': widget.targetType,
-          'targetId': widget.targetId,
-          'reason': reasonText,
-        },
+        body: body,
       );
 
       if (res.statusCode == 201 || res.statusCode == 200) {

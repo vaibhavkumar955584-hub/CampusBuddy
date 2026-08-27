@@ -34,19 +34,22 @@ public class RevealService {
     private final UserRepository userRepository;
     private final RateLimiterService rateLimiterService;
     private final AuditService auditService;
+    private final com.seniorconnect.mentorship.service.MentorshipService mentorshipService;
 
     public RevealService(
             RevealRequestRepository revealRequestRepository,
             QueryRepository queryRepository,
             UserRepository userRepository,
             RateLimiterService rateLimiterService,
-            AuditService auditService
+            AuditService auditService,
+            com.seniorconnect.mentorship.service.MentorshipService mentorshipService
     ) {
         this.revealRequestRepository = revealRequestRepository;
         this.queryRepository = queryRepository;
         this.userRepository = userRepository;
         this.rateLimiterService = rateLimiterService;
         this.auditService = auditService;
+        this.mentorshipService = mentorshipService;
     }
 
     /**
@@ -131,6 +134,11 @@ public class RevealService {
         revealRequest.setStatus(accept ? RevealStatus.ACCEPTED : RevealStatus.REJECTED);
         revealRequest.setResolvedAt(Instant.now());
         RevealRequest saved = revealRequestRepository.save(revealRequest);
+
+        if (accept) {
+            // Privacy Level 3 transition: auto-provision 1-on-1 Direct Mentorship Session
+            mentorshipService.createOrGetSession(revealRequest.getJunior(), revealRequest.getSenior(), revealRequest.getQuery(), null);
+        }
 
         AuditEventType eventType = accept ? AuditEventType.REVEAL_ACCEPTED : AuditEventType.REVEAL_REJECTED;
         auditService.logEvent(

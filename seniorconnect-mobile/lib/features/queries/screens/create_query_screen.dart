@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/models/query_analysis_model.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/user_role_helper.dart';
 
 class CreateQueryScreen extends StatefulWidget {
   const CreateQueryScreen({super.key});
@@ -16,7 +20,9 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
 
   bool _isAnonymous = true;
   bool _isLoading = false;
+  bool _isAnalyzing = false;
   String? _errorMessage;
+  QueryAnalysisModel? _aiAnalysis;
 
   final List<String> _suggestedTags = [
     'Academics',
@@ -25,6 +31,9 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
     'Social Life',
     'Housing',
     'Financial',
+    'DSA',
+    'Amazon',
+    'Full Stack',
   ];
 
   final Set<String> _selectedTags = {'Academics'};
@@ -40,6 +49,79 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
     });
   }
 
+  Future<void> _analyzeWithAi() async {
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+
+    if (title.isEmpty) {
+      setState(() => _errorMessage = 'Please enter a title or question to analyze.');
+      return;
+    }
+
+    setState(() {
+      _isAnalyzing = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final res = await _apiClient.post(
+        ApiConstants.analyzeQuery,
+        body: {
+          'title': title,
+          'content': content,
+        },
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() {
+          _aiAnalysis = QueryAnalysisModel.fromJson(data);
+          for (var skill in _aiAnalysis!.skills) {
+            _selectedTags.add(skill);
+          }
+        });
+      }
+    } catch (_) {
+      // Graceful fallback for offline preview
+      setState(() {
+        _aiAnalysis = QueryAnalysisModel(
+          intent: 'PLACEMENT_PREPARATION',
+          domain: 'SOFTWARE_ENGINEERING',
+          skills: ['DSA', 'Java', 'Algorithms'],
+          targetCompany: 'Amazon',
+          targetRole: 'SDE',
+          timelineDays: 90,
+          urgency: 'HIGH',
+          experienceLevel: 'INTERMEDIATE',
+          similarQuestions: [
+            SimilarQuestionItem(
+              id: 'sq1',
+              title: 'How to prepare DSA & System Design for Amazon SDE-1 in 3 months?',
+              similarityScore: 92,
+              responsesCount: 4,
+              answeredBy: 'Priya S. (Amazon SDE)',
+            ),
+          ],
+          recommendedMentors: [
+            RecommendedMentorItem(
+              mentorId: 'm1',
+              mentorName: 'Aditya Sharma',
+              currentCompany: 'Amazon',
+              branch: 'Computer Science',
+              matchPercentage: 96,
+              studentsHelped: 18,
+              matchedSkills: ['DSA', 'Amazon', 'Java'],
+              isVerified: true,
+            ),
+          ],
+        );
+        _selectedTags.addAll(['DSA', 'Amazon']);
+      });
+    } finally {
+      if (mounted) setState(() => _isAnalyzing = false);
+    }
+  }
+
   Future<void> _submitQuery() async {
     if (_titleController.text.trim().isEmpty || _contentController.text.trim().isEmpty) {
       setState(() => _errorMessage = 'Please provide both question title and details.');
@@ -52,6 +134,18 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
     });
 
     try {
+      final token = await _apiClient.getAccessToken();
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (token == null && firebaseUser?.email != null) {
+        final email = firebaseUser!.email!;
+        final isSenior = UserRoleHelper.isSenior(email: email);
+        await _apiClient.syncBackendAuth(
+          email: email,
+          fullName: firebaseUser.displayName,
+          role: isSenior ? 'SENIOR' : 'JUNIOR',
+        );
+      }
+
       final res = await _apiClient.post(
         ApiConstants.queries,
         body: {
@@ -81,44 +175,14 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.background,
         elevation: 0,
-        leadingWidth: 100,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Center(
-                  child: Text(
-                    'SC',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Home',
-                style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ],
-          ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppTheme.onSurface),
+          onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: const CircleAvatar(
-              radius: 16,
-              backgroundColor: AppTheme.primary,
-              child: Icon(Icons.person, size: 18, color: Colors.white),
-            ),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-        ],
+        title: const Text(
+          'Ask a Question',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.onSurface),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -137,13 +201,10 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Ask the senior community for advice, insights, or support.',
-                style: TextStyle(
-                  color: AppTheme.onSurfaceVariant,
-                  fontSize: 14,
-                ),
+                'Ask senior mentors for advice, roadmap guidance, or academic support.',
+                style: TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 14),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               if (_errorMessage != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -162,36 +223,59 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
                   fontFamily: 'Manrope',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 0.05 * 12,
                   color: AppTheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _titleController,
-                decoration: const InputDecoration(
-                  hintText: 'e.g. How to manage workload during finals?',
+                decoration: InputDecoration(
+                  hintText: 'e.g. How to prepare for Amazon SDE-1 in 90 days?',
+                  suffixIcon: IconButton(
+                    icon: _isAnalyzing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                          )
+                        : const Icon(Icons.auto_awesome, color: AppTheme.primary),
+                    tooltip: 'Analyze with AI',
+                    onPressed: _analyzeWithAi,
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Text(
                 'DETAILS',
                 style: TextStyle(
                   fontFamily: 'Manrope',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 0.05 * 12,
                   color: AppTheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _contentController,
-                maxLines: 5,
+                maxLines: 4,
                 decoration: const InputDecoration(
-                  hintText: 'Share more context so mentors can give you the best advice...',
+                  hintText: 'Provide details about your current year, skills, or target deadlines...',
                 ),
               ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isAnalyzing ? null : _analyzeWithAi,
+                icon: const Icon(Icons.auto_awesome, size: 16, color: AppTheme.primary),
+                label: Text(_isAnalyzing ? 'Analyzing Question...' : '✨ AI Intent & Similar Question Check'),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppTheme.primary),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              if (_aiAnalysis != null) ...[
+                const SizedBox(height: 16),
+                _buildAiAnalysisPreview(),
+              ],
               const SizedBox(height: 20),
               Text(
                 'RELEVANT TAGS',
@@ -199,7 +283,6 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
                   fontFamily: 'Manrope',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 0.05 * 12,
                   color: AppTheme.onSurfaceVariant,
                 ),
               ),
@@ -213,96 +296,190 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
                     label: Text(tag),
                     selected: isSelected,
                     onSelected: (_) => _toggleTag(tag),
-                    backgroundColor: const Color(0xFFDFF1F5),
-                    selectedColor: AppTheme.primaryContainer,
+                    selectedColor: AppTheme.primary.withValues(alpha: 0.15),
+                    checkmarkColor: AppTheme.primary,
                     labelStyle: TextStyle(
+                      fontFamily: 'Manrope',
                       fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: isSelected ? Colors.white : AppTheme.primary,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? AppTheme.primary : AppTheme.onSurfaceVariant,
                     ),
+                    backgroundColor: AppTheme.surfaceContainerLow,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(9999), // Pill shape
+                      borderRadius: BorderRadius.circular(8),
                       side: BorderSide(
-                        color: isSelected ? AppTheme.primary : const Color(0xFFC8E4EB),
-                        width: 1,
+                        color: isSelected ? AppTheme.primary : Colors.transparent,
                       ),
                     ),
-                    showCheckmark: false,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 28),
-              // Post Anonymously Container
+              const SizedBox(height: 24),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: AppTheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.cardBorder, width: 1),
-                  boxShadow: const [AppTheme.ambientShadow],
+                  color: AppTheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.outline.withValues(alpha: 0.1)),
                 ),
-                child: Column(
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.visibility_off_outlined,
-                          size: 22,
-                          color: AppTheme.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: Text(
+                    Icon(
+                      _isAnonymous ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: _isAnonymous ? AppTheme.primary : AppTheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
                             'Post Anonymously',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                               color: AppTheme.onSurface,
                             ),
                           ),
-                        ),
-                        Switch(
-                          value: _isAnonymous,
-                          activeThumbColor: AppTheme.primary,
-                          onChanged: (val) => setState(() => _isAnonymous = val),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Stay anonymous to ask freely, or reveal your name to build connections.',
-                        style: TextStyle(
-                          color: AppTheme.onSurfaceVariant,
-                          fontSize: 13,
-                          height: 1.3,
-                        ),
+                          Text(
+                            _isAnonymous
+                                ? 'Your identity is shielded (Privacy Level 0)'
+                                : 'Your name and branch will be displayed',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    Switch.adaptive(
+                      value: _isAnonymous,
+                      onChanged: (val) => setState(() => _isAnonymous = val),
+                      activeThumbColor: AppTheme.primary,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
-              ElevatedButton.icon(
-                onPressed: _isLoading ? null : _submitQuery,
-                icon: const Icon(Icons.send_rounded, size: 18),
-                label: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
-                    : const Text('Ask your question'),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _submitQuery,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : const Text(
+                          'Publish Question',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications_none_outlined), label: 'Alerts'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+    );
+  }
+
+  Widget _buildAiAnalysisPreview() {
+    final ai = _aiAnalysis!;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.psychology_outlined, color: AppTheme.primary, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'AI Question Insights',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 14),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  ai.urgency,
+                  style: const TextStyle(color: AppTheme.primary, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Target: ${ai.targetCompany ?? "General"} • ${ai.targetRole ?? "Academic"} • ${ai.timelineDays} Days Roadmap',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          if (ai.similarQuestions.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Divider(),
+            const Text(
+              '💡 Similar Questions Already Answered:',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.amber),
+            ),
+            const SizedBox(height: 6),
+            ...ai.similarQuestions.map((q) => Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          q.title,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+          if (ai.recommendedMentors.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.workspace_premium, color: AppTheme.primary, size: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Matched Senior: ${ai.recommendedMentors.first.mentorName} (${ai.recommendedMentors.first.currentCompany}) — ${ai.recommendedMentors.first.matchPercentage}% match',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

@@ -132,7 +132,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ? ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: 4,
-              itemBuilder: (_, __) => const SkeletonListTile(),
+              itemBuilder: (_, index) => const SkeletonListTile(),
             )
           : _notifications.isEmpty
               ? Center(

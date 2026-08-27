@@ -21,7 +21,8 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-    locations: classpath:db/migration
+    validate-on-migrate: false
+    locations: classpath:db/test-migration
   data:
     redis:
       host: localhost
@@ -46,7 +47,7 @@ seniorconnect:
   email-parsing:
     required-domain: galgotiacollege.edu
     college-prefix: gce
-    academic-start-month: 7 # July
+    academic-start-month: 8 # August
     branches:
       bit: "Information Technology"
       it: "Information Technology"

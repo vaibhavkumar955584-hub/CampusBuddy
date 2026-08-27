@@ -144,6 +144,91 @@ CREATE TABLE verification_requests (
 CREATE INDEX idx_verification_requests_status ON verification_requests(status);
 CREATE INDEX idx_verification_requests_senior ON verification_requests(senior_id);
 
+CREATE TABLE mentorship_plans (
+    id UUID PRIMARY KEY,
+    junior_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    senior_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    goal_title VARCHAR(200) NOT NULL,
+    target_company VARCHAR(100),
+    target_role VARCHAR(100),
+    duration_days INT NOT NULL DEFAULT 90,
+    status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    progress_percentage INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE mentorship_plan_tasks (
+    id UUID PRIMARY KEY,
+    plan_id UUID NOT NULL REFERENCES mentorship_plans(id) ON DELETE CASCADE,
+    week_number INT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description VARCHAR(1000),
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE mentorship_outcomes (
+    id UUID PRIMARY KEY,
+    plan_id UUID REFERENCES mentorship_plans(id) ON DELETE SET NULL,
+    junior_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    senior_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    outcome_type VARCHAR(50) NOT NULL,
+    company VARCHAR(100),
+    role VARCHAR(100),
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    proof_url VARCHAR(500),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_mentorship_plans_junior ON mentorship_plans(junior_id);
+CREATE INDEX idx_mentorship_plans_senior ON mentorship_plans(senior_id);
+CREATE INDEX idx_mentorship_tasks_plan ON mentorship_plan_tasks(plan_id);
+CREATE INDEX idx_mentorship_outcomes_junior ON mentorship_outcomes(junior_id);
+CREATE INDEX idx_mentorship_outcomes_senior ON mentorship_outcomes(senior_id);
+
+CREATE TABLE mentorship_sessions (
+    id UUID PRIMARY KEY,
+    junior_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    senior_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    query_id UUID REFERENCES queries(id) ON DELETE SET NULL,
+    plan_id UUID REFERENCES mentorship_plans(id) ON DELETE SET NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+    privacy_level INT NOT NULL DEFAULT 3,
+    meeting_link VARCHAR(500),
+    session_notes VARCHAR(1000),
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_session_pair UNIQUE (junior_id, senior_id)
+);
+
+CREATE TABLE mentorship_session_messages (
+    id UUID PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES mentorship_sessions(id) ON DELETE CASCADE,
+    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message_content VARCHAR(4000) NOT NULL,
+    is_encrypted BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_mentorship_sessions_junior ON mentorship_sessions(junior_id);
+CREATE INDEX idx_mentorship_sessions_senior ON mentorship_sessions(senior_id);
+CREATE INDEX idx_session_messages_session ON mentorship_session_messages(session_id);
+
+CREATE TABLE mentorship_reviews (
+    id UUID PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES mentorship_sessions(id) ON DELETE CASCADE,
+    junior_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    senior_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review_comment VARCHAR(1000),
+    is_public BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_session_review UNIQUE (session_id)
+);
+
+CREATE INDEX idx_mentorship_reviews_senior ON mentorship_reviews(senior_id);
+CREATE INDEX idx_mentorship_reviews_junior ON mentorship_reviews(junior_id);
+
 INSERT INTO allowed_domains (id, domain, college_name, is_active, created_at)
 VALUES ('00000000-0000-0000-0000-000000000001', 'galgotiacollege.edu.in', 'Galgotias College of Engineering and Technology', TRUE, CURRENT_TIMESTAMP);
 INSERT INTO allowed_domains (id, domain, college_name, is_active, created_at)

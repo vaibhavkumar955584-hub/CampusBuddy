@@ -135,42 +135,46 @@ class _QueryDetailScreenState extends State<QueryDetailScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
+                                  Wrap(
+                                    alignment: WrapAlignment.spaceBetween,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 8,
                                     children: [
                                       AnonymityBadge(
                                         isAnonymous: _query!.isAnonymousDisplay,
                                         studentName: _query!.juniorName,
                                       ),
-                                      const Spacer(),
-                                      if (user != null && user.isSenior && _query!.isAnonymousDisplay && !_query!.identityRevealedToViewer)
-                                        OutlinedButton.icon(
-                                          style: OutlinedButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                            minimumSize: const Size(0, 36),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (user != null && user.isSenior && _query!.isAnonymousDisplay && !_query!.identityRevealedToViewer)
+                                            OutlinedButton.icon(
+                                              style: OutlinedButton.styleFrom(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                minimumSize: const Size(0, 32),
+                                              ),
+                                              onPressed: _requestReveal,
+                                              icon: const Icon(Icons.handshake_outlined, size: 14),
+                                              label: const Text('Request Reveal', style: TextStyle(fontSize: 11)),
+                                            ),
+                                          const SizedBox(width: 6),
+                                          IconButton(
+                                            icon: const Icon(Icons.flag_outlined, size: 18, color: AppTheme.outline),
+                                            tooltip: 'Report Question',
+                                            constraints: const BoxConstraints(),
+                                            padding: const EdgeInsets.all(4),
+                                            onPressed: () {
+                                              ReportModal.show(
+                                                context,
+                                                targetType: 'QUERY',
+                                                targetId: _query!.id,
+                                                reportedUserId: _query!.juniorId,
+                                                targetTitle: _query!.title,
+                                              );
+                                            },
                                           ),
-                                          onPressed: _requestReveal,
-                                          icon: const Icon(Icons.handshake_outlined, size: 16),
-                                          label: const Text('Request Reveal', style: TextStyle(fontSize: 12)),
-                                        ),
-                                      const SizedBox(width: 8),
-                                      IconButton(
-                                        icon: const Icon(Icons.flag_outlined, size: 20, color: AppTheme.outline),
-                                        tooltip: 'Report Question',
-                                        onPressed: () {
-                                          if (_query?.juniorId != null) {
-                                            ReportModal.show(
-                                              context,
-                                              targetType: 'QUERY',
-                                              targetId: _query!.id,
-                                              reportedUserId: _query!.juniorId!,
-                                              targetTitle: _query!.title,
-                                            );
-                                          } else {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Cannot report anonymous author without admin reveal.')),
-                                            );
-                                          }
-                                        },
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -249,37 +253,60 @@ class _QueryDetailScreenState extends State<QueryDetailScreen> {
               CircleAvatar(
                 radius: 14,
                 backgroundColor: AppTheme.primaryContainer,
-                child: Text(resp.seniorName[0], style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
+                child: Text(
+                  resp.seniorName.isNotEmpty ? resp.seniorName[0] : 'S',
+                  style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(width: 8),
-              Text(resp.seniorName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.onSurface)),
-              const SizedBox(width: 6),
-              if (resp.placementTag != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDFF1F5),
-                    borderRadius: BorderRadius.circular(9999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.verified, size: 12, color: AppTheme.primary),
-                      const SizedBox(width: 4),
-                      Text(resp.placementTag!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        resp.seniorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.onSurface),
+                      ),
+                    ),
+                    if (resp.placementTag != null) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDFF1F5),
+                          borderRadius: BorderRadius.circular(9999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.verified, size: 11, color: AppTheme.primary),
+                            const SizedBox(width: 3),
+                            Text(
+                              resp.placementTag!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.primary),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
-                  ),
+                  ],
                 ),
-              const Spacer(),
+              ),
+              const SizedBox(width: 6),
               if (resp.isAcceptedAnswer)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  margin: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  margin: const EdgeInsets.only(right: 4),
                   decoration: BoxDecoration(
                     color: AppTheme.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text('ACCEPTED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.success)),
+                  child: const Text('ACCEPTED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.success)),
                 ),
               IconButton(
                 icon: const Icon(Icons.flag_outlined, size: 16, color: AppTheme.outline),
