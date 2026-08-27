@@ -32,6 +32,12 @@ class _QueryDetailScreenState extends State<QueryDetailScreen> {
     _fetchQueryDetails();
   }
 
+  @override
+  void dispose() {
+    _answerController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchQueryDetails() async {
     setState(() => _isLoading = true);
     try {

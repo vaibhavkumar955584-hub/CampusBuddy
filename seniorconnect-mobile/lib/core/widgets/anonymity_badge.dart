@@ -38,6 +38,8 @@ class AnonymityBadge extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               'Anonymous Junior',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: isCompact ? 10 : 11,
                 fontWeight: FontWeight.w700,
@@ -53,6 +55,7 @@ class AnonymityBadge extends StatelessWidget {
       final displayName = (studentName != null && studentName!.isNotEmpty) ? studentName! : 'Named Student';
 
       return Container(
+        constraints: const BoxConstraints(maxWidth: 150),
         padding: EdgeInsets.symmetric(
           horizontal: isCompact ? 7 : 9,
           vertical: isCompact ? 3 : 4,

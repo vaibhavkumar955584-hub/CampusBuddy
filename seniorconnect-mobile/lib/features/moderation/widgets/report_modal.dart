@@ -59,6 +59,12 @@ class _ReportModalState extends State<ReportModal> {
   bool _isSubmitting = false;
   String? _errorMessage;
 
+  @override
+  void dispose() {
+    _detailsController.dispose();
+    super.dispose();
+  }
+
   Future<void> _submitReport() async {
     if (_selectedReason == null) {
       setState(() => _errorMessage = 'Please select a reason for reporting');

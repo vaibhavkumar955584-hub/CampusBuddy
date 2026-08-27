@@ -92,6 +92,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     _customTagController = TextEditingController();
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _branchController.dispose();
+    _customTagController.dispose();
+    super.dispose();
+  }
+
   static String _cleanName(String raw) {
     if (raw.isEmpty) return 'Student';
     // If raw is like "vaibhav.24gcebit052", take "vaibhav"

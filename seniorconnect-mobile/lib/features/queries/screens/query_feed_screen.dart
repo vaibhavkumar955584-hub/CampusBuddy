@@ -366,36 +366,36 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
                   children: [
-                    Flexible(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: AnonymityBadge(
-                              isAnonymous: query.isAnonymousDisplay,
-                              studentName: query.juniorName,
-                            ),
-                          ),
-                          if (query.juniorBranch != null) ...[
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                '• ${query.juniorBranch}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: isDark ? AppTheme.darkOnSurfaceVariant : AppTheme.onSurfaceVariant,
-                                  fontSize: 12,
-                                ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnonymityBadge(
+                          isAnonymous: query.isAnonymousDisplay,
+                          studentName: query.juniorName,
+                        ),
+                        if (query.juniorBranch != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            constraints: const BoxConstraints(maxWidth: 120),
+                            child: Text(
+                              '• ${query.juniorBranch}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isDark ? AppTheme.darkOnSurfaceVariant : AppTheme.onSurfaceVariant,
+                                fontSize: 12,
                               ),
                             ),
-                          ],
+                          ),
                         ],
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -434,11 +434,16 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                   style: const TextStyle(color: AppTheme.onSurfaceVariant, fontSize: 14, height: 1.4),
                 ),
                 const SizedBox(height: 14),
-                Row(
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     if (query.tags != null && query.tags!.isNotEmpty)
                       Wrap(
                         spacing: 6,
+                        runSpacing: 4,
                         children: query.tags!.split(',').map((t) {
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -453,8 +458,8 @@ class _QueryFeedScreenState extends State<QueryFeedScreen> {
                           );
                         }).toList(),
                       ),
-                    const Spacer(),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.mode_comment_outlined, size: 14, color: AppTheme.outline),
                         const SizedBox(width: 4),

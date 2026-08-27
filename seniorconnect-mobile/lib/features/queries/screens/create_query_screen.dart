@@ -39,6 +39,13 @@ class _CreateQueryScreenState extends State<CreateQueryScreen> {
   final Set<String> _selectedTags = {'Academics'};
   final ApiClient _apiClient = ApiClient();
 
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
+  }
+
   void _toggleTag(String tag) {
     setState(() {
       if (_selectedTags.contains(tag)) {
